@@ -1,2 +1,10 @@
 packages:
-  - "."
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver
+  - "@electric-sql/pglite"
+  - "@tailwindcss/oxide"
+  - sharp

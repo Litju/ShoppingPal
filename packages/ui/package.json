@@ -1,0 +1,30 @@
+{
+  "name": "@shoppingpal/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared ShoppingPal presentation primitives (React). Render-only: no commerce authority, no data fetching.",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"covered by consuming workspaces\" && exit 0"
+  },
+  "dependencies": {
+    "@shoppingpal/contracts": "workspace:*",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.33.0",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@shoppingpal/config": "workspace:*",
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
+    "typescript": "~5.9.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8"
+  }
+}

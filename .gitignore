@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store/
 
+# turborepo
+.turbo/
+
 # next.js
 .next/
 out/

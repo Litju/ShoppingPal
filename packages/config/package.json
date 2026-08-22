@@ -1,0 +1,12 @@
+{
+  "name": "@shoppingpal/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared tooling configuration for ShoppingPal workspaces.",
+  "files": [
+    "tsconfig.base.json"
+  ],
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
