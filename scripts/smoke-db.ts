@@ -7,7 +7,6 @@ async function main() {
     const n = await upsertSeedProducts(db);
     console.log("seeded rows:", n);
     const res = await db.execute(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (await import("drizzle-orm")).sql`select count(*)::text as c from products`,
     );
     console.log("count:", JSON.stringify(res));

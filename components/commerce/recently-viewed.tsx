@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 
 import { ProductCard } from "@/components/commerce/product-card";
-import { getCatalogProvider } from "@/lib/catalog";
 import type { Product } from "@/lib/catalog/types";
 
 const VIEWED_KEY = "sp_recently_viewed";

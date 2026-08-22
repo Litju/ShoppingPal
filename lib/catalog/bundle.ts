@@ -23,12 +23,6 @@ export interface BuildBundleOptions {
   candidates: BundleCandidate[];
 }
 
-function defaultScore(product: Product): number {
-  // Value heuristic: rating dominates, review volume breaks ties, price
-  // matters only as a mild penalty so expensive-but-great items still win.
-  return product.ratingTenths * 10 + Math.log10(product.reviewCount + 10) * 5;
-}
-
 /** Greedy selection: strongest per area, cheapest-first fallback under budget. */
 export function buildBundleFromCandidates(options: BuildBundleOptions): Bundle | null {
   const { budget, explicit = [], candidates, maxItems = 6 } = options;

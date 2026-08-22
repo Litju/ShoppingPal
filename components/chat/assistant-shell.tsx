@@ -62,11 +62,14 @@ export function AssistantShell({ children }: { children: React.ReactNode }) {
         <>
           <button
             type="button"
-            onClick={pal.open}
+            onClick={pal.toggle}
             aria-expanded={open}
             aria-controls="pal-mobile-panel"
             data-testid="assistant-launcher"
-            className="focus-ring fixed bottom-5 right-5 z-40 flex h-14 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-black/15 lg:hidden"
+            className={cn(
+              "focus-ring fixed bottom-5 right-5 flex h-14 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-black/15 lg:hidden",
+              open ? "z-[60]" : "z-40",
+            )}
           >
             {open ? <X aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
             {open ? "Close Pal" : "Ask your Pal"}

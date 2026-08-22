@@ -1,5 +1,3 @@
-import type { ShoppingPalTools } from "@/lib/ai/tools";
-
 /**
  * System prompt. Grounding rules are absolute: the model narrates and
  * reasons, application tools supply every fact.

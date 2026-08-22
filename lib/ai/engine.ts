@@ -7,7 +7,6 @@ import { computeRecommendation } from "@/lib/ai/explain";
 import {
   addToCartInput,
   compareProductsInput,
-  findAlternativesInput,
   getProductInput,
   prepareCheckoutOutput,
   removeFromCartInput,

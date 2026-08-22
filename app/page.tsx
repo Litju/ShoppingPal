@@ -6,7 +6,7 @@ import { ProductCard } from "@/components/commerce/product-card";
 import { RecentlyViewed } from "@/components/commerce/recently-viewed";
 import { getCatalogProvider } from "@/lib/catalog";
 import { COLLECTIONS } from "@/lib/catalog/data/products";
-import { CATEGORY_LABELS, CATEGORY_SLUGS } from "@/lib/catalog/types";
+import { CATEGORY_LABELS } from "@/lib/catalog/types";
 
 export const dynamic = "force-dynamic";
 

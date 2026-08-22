@@ -6,7 +6,7 @@ import {
   FiltersPanel,
   SortSelect,
 } from "@/components/commerce/filters-panel";
-import { ProductCard, ProductCardSkeleton } from "@/components/commerce/product-card";
+import { ProductCard } from "@/components/commerce/product-card";
 import { getCatalogProvider } from "@/lib/catalog";
 import { CATEGORY_LABELS, CATEGORY_SLUGS, type CategorySlug, type SortOption } from "@/lib/catalog/types";
 

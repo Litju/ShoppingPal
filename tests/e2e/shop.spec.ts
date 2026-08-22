@@ -68,8 +68,8 @@ test.describe("Shopping Pal desktop flows", () => {
       .locator("#pal-composer")
       .fill("Compare the Marlowe Sound Pulse ANC Headphones vs Northwind Acoustics Fjord ANC");
     await page.locator("#pal-composer").press("Enter");
-    await expect(page.getByText("Side-by-side comparison")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Biggest price gap is", { exact: false })).toBeVisible();
+    await expect(page.getByText("Side-by-side comparison").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Biggest price gap is", { exact: false }).first()).toBeVisible();
 
     /* 11. Add a recommended product through Shopping Pal */
     const countBefore = Number(await page.getByTestId("cart-count").innerText());
@@ -120,6 +120,6 @@ test.describe("Shopping Pal desktop flows", () => {
   test("empty search shows a helpful empty state", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-chromium", "Desktop viewport flow");
     await page.goto("/products?q=zzzznothing");
-    await expect(page.getByText("No products match those filters.")).toBeVisible();
+    await expect(page.getByText("No products match those filters.").first()).toBeVisible();
   });
 });

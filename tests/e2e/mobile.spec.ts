@@ -44,9 +44,14 @@ test.describe("Shopping Pal mobile flows", () => {
     await expect(page.getByTestId("cart-count")).toHaveText(String(before + 1));
 
     /* Close the sheet; the store is fully usable without chat */
+    // Move the pointer off the bottom-centered toaster first: sonner pauses
+    // toast timers while hovered, and the full-width mobile toaster would
+    // otherwise keep the success toast blocking the close button.
+    await page.mouse.move(8, 120);
+    await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 10_000 });
     await page.getByRole("button", { name: "Close Pal" }).click();
     await expect(dialog).toBeHidden();
     await page.goto("/saved");
-    await expect(page.getByText("Saved items")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Saved items" })).toBeVisible();
   });
 });

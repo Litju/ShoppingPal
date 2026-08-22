@@ -1,6 +1,5 @@
 import type {
   CatalogQuery,
-  CategorySlug,
   Product,
   SortOption,
 } from "@/lib/catalog/types";

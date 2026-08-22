@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 
 import { sql } from "drizzle-orm";
@@ -14,8 +14,8 @@ export interface DatabaseHandle {
 
 /**
  * Single database type for the whole app. Runtime drivers:
- * - DATABASE_URL set  → Postgres (works with Neon pooled URLs, Supabase, RDS…)
- * - DATABASE_URL empty→ embedded PGlite persisted under .data/pg (demo mode)
+ * - DATABASE_URL set  â†’ Postgres (works with Neon pooled URLs, Supabase, RDSâ€¦)
+ * - DATABASE_URL emptyâ†’ embedded PGlite persisted under .data/pg (demo mode)
  */
 type Executor = import("drizzle-orm/postgres-js").PostgresJsDatabase<typeof schema>;
 
@@ -23,7 +23,16 @@ export type Database = Executor;
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
-let handlePromise: Promise<DatabaseHandle> | null = null;
+/**
+ * Production Next.js bundles lib/db separately per route/runtime entrypoint,
+ * so a module-level promise alone lets several PGlite instances race against
+ * the same data directory (WASM aborts mid-DDL). Stashing the in-flight
+ * handle on globalThis makes initialization process-wide idempotent.
+ */
+const globalForDb = globalThis as unknown as {
+  __shoppingPalDbHandle?: Promise<DatabaseHandle>;
+  __shoppingPalDbSchemaReady?: boolean;
+};
 
 /** Resolve which database backend the app should use. */
 export function databaseConfigured(): boolean {
@@ -32,7 +41,7 @@ export function databaseConfigured(): boolean {
 
 /**
  * Whether a usable database exists at all. With no DATABASE_URL the app
- * transparently uses embedded PGlite, so this is almost always true —
+ * transparently uses embedded PGlite, so this is almost always true â€”
  * demo mode has full cart/order/auth functionality.
  */
 export async function databaseAvailable(): Promise<boolean> {
@@ -76,38 +85,55 @@ async function createHandle(): Promise<DatabaseHandle> {
  * database lazily on first access, so `pnpm dev` works with zero setup.
  */
 export function getDatabase(): Promise<DatabaseHandle> {
-  if (!handlePromise) {
-    handlePromise = (async () => {
+  if (!globalForDb.__shoppingPalDbHandle) {
+    globalForDb.__shoppingPalDbHandle = (async () => {
       const handle = await createHandle();
       await ensureSchema(handle);
+      // Seed-on-boot keeps every backend consumer (cart, auth, checkout,
+      // saved) consistent with the catalog's deterministic product ids.
+      // Idempotent: no-op whenever the products table already has rows.
+      const { ensureSeeded } = await import("@/lib/db/seed");
+      await ensureSeeded(handle.db);
       return handle;
     })().catch((error) => {
-      handlePromise = null;
+      globalForDb.__shoppingPalDbHandle = undefined;
       throw error;
     });
   }
-  return handlePromise;
+  return globalForDb.__shoppingPalDbHandle;
 }
 
-let schemaReady = false;
+/**
+ * Warm the database once at server boot (called from instrumentation.ts)
+ * so schema creation and seeding complete before any request can race it.
+ */
+export async function warmDatabase(): Promise<boolean> {
+  try {
+    await getDatabase();
+    return true;
+  } catch (error) {
+    console.error("[db] warmup failed:", error);
+    return false;
+  }
+}
 
 /** Create tables when missing so fresh environments are usable immediately. */
 export async function ensureSchema(handle: DatabaseHandle): Promise<void> {
-  if (schemaReady) return;
+  if (globalForDb.__shoppingPalDbSchemaReady) return;
   try {
     const result = await handle.db.execute<{ regclass: string | null }>(
       sql`select to_regclass('public.products') as regclass`,
     );
     const rows = extractRows<{ regclass: string | null }>(result);
     if (rows[0]?.regclass != null) {
-      schemaReady = true;
+      globalForDb.__shoppingPalDbSchemaReady = true;
       return;
     }
   } catch {
     // fall through to migration
   }
   await runMigrations(handle.db);
-  schemaReady = true;
+  globalForDb.__shoppingPalDbSchemaReady = true;
 }
 
 /** Apply generated drizzle migrations from ./drizzle */

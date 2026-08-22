@@ -4,7 +4,6 @@ import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Sparkles, User } from "lucide-react";
 
-import { Composer } from "@/components/chat/composer";
 import { MessageParts } from "@/components/chat/message-parts";
 import { usePal } from "@/components/chat/chat-context";
 import type { ShoppingPalMessage } from "@/components/chat/types";

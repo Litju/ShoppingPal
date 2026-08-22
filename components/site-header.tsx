@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, Heart, LogOut, Menu, Search, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, Heart, LogOut, Search, User } from "lucide-react";
 
 import { CartButton } from "@/components/commerce/cart-button";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { signOutUser, useSessionUser } from "@/lib/auth/client";
 
 interface CategoryInfo {
@@ -45,7 +38,6 @@ const NAV_CATEGORIES: CategoryInfo[] = [
 export function SiteHeader({ categories }: { categories?: CategoryInfo[] }) {
   const cats = categories ?? NAV_CATEGORIES;
   const router = useRouter();
-  const pathname = usePathname();
   const [q, setQ] = React.useState("");
   const session = useSessionUser();
   const user = session.user;

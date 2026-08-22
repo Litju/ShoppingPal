@@ -1,13 +1,21 @@
-import type { Linter } from "eslint";
+import nextPlugin from "@next/eslint-plugin-next";
+import reactHooks from "eslint-plugin-react-hooks";
+import typescriptEslint from "typescript-eslint";
 
-import { FlatCompat } from "@eslint/eslintrc";
-
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
-
-const eslintConfig: Linter.Config[] = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+const eslintConfig = [
+  ...typescriptEslint.configs.recommended,
+  nextPlugin.configs["core-web-vitals"],
+  {
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/consistent-type-imports": "off",
+      "react-hooks/exhaustive-deps": "warn",
+    },
+  },
   {
     ignores: [
       "node_modules/**",
@@ -17,18 +25,8 @@ const eslintConfig: Linter.Config[] = [
       "playwright-report/**",
       "test-results/**",
       "next-env.d.ts",
-      "db/migrations.ts",
+      "apps/**/node_modules/**",
     ],
-  },
-  {
-    rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
-      ],
-      "@typescript-eslint/consistent-type-imports": "off",
-      "react-hooks/exhaustive-deps": "warn",
-    },
   },
 ];
 
