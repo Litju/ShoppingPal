@@ -1,0 +1,18 @@
+{
+  "name": "@shoppingpal/test-utils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic fixtures and helpers for ShoppingPal tests across workspaces.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@shoppingpal/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@shoppingpal/config": "workspace:*",
+    "typescript": "~5.9.3"
+  }
+}

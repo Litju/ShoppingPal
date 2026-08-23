@@ -1,0 +1,46 @@
+[project]
+name = "shoppingpal-agent"
+version = "0.1.0"
+description = "ShoppingPal's explicit ShoppingGraph, Eve runtime, and durable mission API."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "asyncpg>=0.30.0",
+  "fastapi>=0.115.0",
+  "httpx>=0.28.0",
+  "langchain>=0.3.0",
+  "langchain-core>=0.3.0",
+  "langchain-openai>=0.3.0",
+  "langgraph>=0.2.60",
+  "langgraph-checkpoint-postgres>=2.0.0",
+  "pydantic>=2.10.0",
+  "uvicorn[standard]>=0.34.0",
+]
+
+[dependency-groups]
+dev = [
+  "pyright>=1.1.390",
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.25.0",
+  "ruff>=0.9.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.pyright]
+include = ["shoppingpal", "tests"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
+reportTypedDictNotRequiredAccess = "none"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

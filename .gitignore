@@ -1,6 +1,10 @@
 # dependencies
 node_modules/
 .pnpm-store/
+**/.venv/
+
+# turborepo
+.turbo/
 
 # next.js
 .next/
@@ -14,6 +18,9 @@ next-env.d.ts
 playwright-report/
 test-results/
 coverage/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
 
 # env
 .env
@@ -24,3 +31,10 @@ coverage/
 .DS_Store
 Thumbs.db
 *.log
+
+# medusa local env
+apps/commerce/.env
+**/.medusa/
+
+# compiled contracts
+packages/contracts/dist/

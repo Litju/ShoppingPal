@@ -1,0 +1,31 @@
+{
+  "name": "@shoppingpal/commerce",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ShoppingPal commerce engine — Medusa v2 owns products, variants, prices, inventory, carts, payments, orders, and customer identity.",
+  "scripts": {
+    "build": "medusa build",
+    "dev": "medusa start --develop",
+    "start": "medusa start",
+    "typecheck": "tsc --noEmit",
+    "db:create": "medusa db:create",
+    "db:migrate": "medusa db:migrate",
+    "db:seed": "medusa exec ./src/scripts/seed-catalog.ts",
+    "search:sync": "medusa exec ./src/scripts/sync-typesense.ts",
+    "bootstrap": "medusa db:create && medusa db:migrate && medusa exec ./src/scripts/seed-catalog.ts"
+  },
+  "dependencies": {
+    "@medusajs/admin-sdk": "^2.19.0",
+    "@medusajs/cli": "^2.19.0",
+    "@medusajs/framework": "^2.19.0",
+    "@medusajs/medusa": "^2.19.0",
+    "@shoppingpal/contracts": "workspace:*",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@shoppingpal/config": "workspace:*",
+    "@types/node": "^26.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.3"
+  }
+}

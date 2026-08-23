@@ -1,25 +1,14 @@
-import type { Linter } from "eslint";
+import nextPlugin from "@next/eslint-plugin-next";
+import reactHooks from "eslint-plugin-react-hooks";
+import typescriptEslint from "typescript-eslint";
 
-import { FlatCompat } from "@eslint/eslintrc";
-
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
-
-const eslintConfig: Linter.Config[] = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-  {
-    ignores: [
-      "node_modules/**",
-      ".next/**",
-      "out/**",
-      ".data/**",
-      "playwright-report/**",
-      "test-results/**",
-      "next-env.d.ts",
-      "db/migrations.ts",
-    ],
-  },
+/**
+ * Single root flat config for the whole monorepo.
+ * - Shared packages: strict TS rules.
+ * - Web app (apps/web): Next.js core-web-vitals + React hooks rules.
+ */
+const eslintConfig = [
+  ...typescriptEslint.configs.recommended,
   {
     rules: {
       "@typescript-eslint/no-unused-vars": [
@@ -27,8 +16,35 @@ const eslintConfig: Linter.Config[] = [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/consistent-type-imports": "off",
+    },
+  },
+  {
+    files: ["apps/web/**/*.{ts,tsx,mts,mjs}"],
+    plugins: {
+      "@next/next": nextPlugin,
+      "react-hooks": reactHooks,
+    },
+    rules: {
+      ...nextPlugin.configs["core-web-vitals"].rules,
       "react-hooks/exhaustive-deps": "warn",
     },
+  },
+  {
+    ignores: [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/.data/**",
+      "**/.turbo/**",
+      "**/.venv/**",
+      "**/__pycache__/**",
+      "**/.pytest_cache/**",
+      "**/.medusa/**",
+      "packages/contracts/dist/**",
+      "**/out/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
+      "**/next-env.d.ts",
+    ],
   },
 ];
 

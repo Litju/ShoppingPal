@@ -1,3 +1,10 @@
-allowBuilds:
-  esbuild: set this to true or false
-  unrs-resolver: set this to true or false
+packages:
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver
+  - "@electric-sql/pglite"
+  - "@tailwindcss/oxide"
+  - sharp
