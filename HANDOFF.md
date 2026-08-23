@@ -48,58 +48,59 @@ Live qualification also covers Medusa catalog/auth/cart behavior, Typesense proj
 
 ## Qualification receipt
 
-The final values below are written only after the public cleanup has been requalified:
+The `FINAL_HEAD` below is the qualified implementation snapshot. The commit
+that records this receipt changes only this handoff document.
 
 ```text
 SHOPPINGPAL_PUBLIC_PORTFOLIO_RELEASE
 
-SOURCE_HEAD=
-FINAL_HEAD=
-RELEASE_TAG=
-WORKTREE_CLEAN=
+SOURCE_HEAD=f89edcec5544ac67baa97d6bdc77fa2780b51e31
+FINAL_HEAD=06ec120962f6b933d22fd5ca3d7cf86f94c9c1a9
+RELEASE_TAG=NOT_CREATED
+WORKTREE_CLEAN=PASS
 
-PRODUCT_RUNTIME=
-OFFICIAL_EVE=
-AGENT_MODEL=
-LANGGRAPH=
-MEDUSA=
-TYPESENSE=
-STRIPE_TEST_PAYMENT=
-CANONICAL_ORDER=
+PRODUCT_RUNTIME=PASS
+OFFICIAL_EVE=PASS
+AGENT_MODEL=PASS_WITH_LIMITATION
+LANGGRAPH=PASS
+MEDUSA=PASS
+TYPESENSE=PASS_WITH_LIMITATION
+STRIPE_TEST_PAYMENT=NOT_RUN
+CANONICAL_ORDER=NOT_RUN
 
-DEVELOPMENT_AGENT_TRACE_AUDIT=
-INTERNAL_NAMING_AUDIT=
-MODEL_PROVIDER_UI_LEAKAGE=
-PROMPT_AUDIT=
-SOURCE_COMMENT_AUDIT=
-DEPENDENCY_AUDIT=
-DEAD_CODE_AUDIT=
-PUBLIC_DOCS=
-ARCHITECTURE_DOC=
-ENV_CONTRACT=
-PERSONAL_DATA_AUDIT=
-SECRET_TREE_AUDIT=
-SECRET_HISTORY_AUDIT=
+DEVELOPMENT_AGENT_TRACE_AUDIT=PASS
+INTERNAL_NAMING_AUDIT=PASS
+MODEL_PROVIDER_UI_LEAKAGE=PASS
+PROMPT_AUDIT=PASS
+SOURCE_COMMENT_AUDIT=PASS
+DEPENDENCY_AUDIT=PASS
+DEAD_CODE_AUDIT=PASS_WITH_LIMITATION
+PUBLIC_DOCS=PASS
+ARCHITECTURE_DOC=PASS
+ENV_CONTRACT=PASS
+PERSONAL_DATA_AUDIT=PASS
+SECRET_TREE_AUDIT=PASS
+SECRET_HISTORY_AUDIT=PASS_WITH_LIMITATION
 
-DESKTOP_UX=
-MOBILE_UX=
-ACCESSIBILITY=
-DEGRADED_MODE=
+DESKTOP_UX=PASS
+MOBILE_UX=PASS
+ACCESSIBILITY=PASS_WITH_LIMITATION
+DEGRADED_MODE=PASS
 
-WEB_LINT=
-WEB_TYPECHECK=
-WEB_TESTS=
-WEB_BUILD=
-PYTHON_RUFF=
-PYTHON_PYRIGHT=
-PYTHON_TESTS=
-EVE_EVALS=
-E2E=
-STRIPE_E2E=
-CLEAN_CLONE=
+WEB_LINT=PASS
+WEB_TYPECHECK=PASS
+WEB_TESTS=PASS (73)
+WEB_BUILD=PASS
+PYTHON_RUFF=PASS
+PYTHON_PYRIGHT=PASS
+PYTHON_TESTS=PASS (12 passed, 2 skipped)
+EVE_EVALS=PASS
+E2E=PASS (live 4 passed, 4 skipped; degraded 1 passed, 7 skipped)
+STRIPE_E2E=PASS_WITH_LIMITATION
+CLEAN_CLONE=PASS
 
-PUBLIC_RELEASE_READY=
-KNOWN_LIMITATIONS=
+PUBLIC_RELEASE_READY=PASS_WITH_LIMITATIONS
+KNOWN_LIMITATIONS=Stripe is intentionally unconfigured; checkout returns an explicit 503 and no order is created. External model credentials are optional, so the deterministic structured fallback is the default. Typesense `/health` and sync passed, but the local Docker healthcheck reports unhealthy because its image lacks the probe binary. Historical commits retain a local publishable key and earlier release wording; no private secret was found and public history was not rewritten.
 ```
 
-Checkout is `PASS_WITH_LIMITATION` until a Medusa payment provider is configured. The static catalog is browse-only without Medusa, external model credentials are optional, and browser skips are expected for unavailable service prerequisites.
+Checkout is `PASS_WITH_LIMITATION` until a payment provider is configured. The static catalog is browse-only without the commerce service, external model credentials are optional, and browser skips are expected for unavailable service prerequisites.
