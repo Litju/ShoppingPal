@@ -18,6 +18,9 @@ c908290  Gate D: Medusa Auth cutover                          <- DONE
 a4fe955  Gate E: Typesense discovery projection                <- DONE
 1cab7bf  Gate F: FastAPI shopping graph and Eve runtime        <- DONE
 2545368  Legacy: remove duplicate web commerce authorities     <- DONE
+f7ae6c2  test: stabilize responsive results locator             <- DONE
+f9ffbf3  docs: record post-parity authority state               <- DONE
+de03605  build: order workspace test dependencies               <- DONE
 ```
 
 ---
@@ -177,5 +180,66 @@ Post-parity removal evidence:
 - `2545368` deletes the duplicate web commerce providers, local checkout/order implementation, Better Auth-era schema tables, legacy seeds/migrations, and Stripe web dependency.
 - `pnpm --filter @shoppingpal/web test` passed with 72 tests, including non-commerce state migration and canonical Medusa cart regressions. The no-env E2E contract is browse/degraded-only: commerce-heavy suites skip without Medusa, while catalog browsing remains available.
 - The checkout API and server action return the same explicit Medusa payment-setup limitation; no local order or payment record is created.
+
+Final qualification evidence:
+- Fresh Medusa/Typesense/Agent production E2E after `f7ae6c2`: `4 passed, 4 skipped`; the skipped cases are the intentionally viewport-gated duplicates. The run covered Medusa Auth, catalog/PDP/cart, quantity/removal, agent recommendation/compare/add-to-cart, cart badge/read, bundle, mobile assistant, and explicit checkout degradation.
+- Fresh no-env production E2E: `1 passed, 7 skipped`; browse remained usable, commerce/auth/mobile mutations skipped by prerequisite. `/api/config` returned `checkoutEnabled=false`; `POST /api/checkout` returned HTTP 503 with `Checkout isn't available right now. Medusa payment setup is required.`
+- Live Agent on `:8200`: health `status=ok`, `runtime=eve-shoppinggraph`, `checkpoint_backend=postgres`; canonical recommendation, Marlowe CartProposal, invalid-product rejection, stable replay operation ID, Eve events, internal-token 401, mission persistence, and actor scoping were executed.
+- Clean clone `C:\Users\Usuario\Desktop\Projects\SP-clean-final` at `de03605`: frozen pnpm install, lint, typecheck, root test (72), full web/Medusa build, frozen uv sync, Ruff, Pyright, Postgres-backed pytest (12), and clean clone status all passed. The longer `%TEMP%` path exposed a Windows Node package-scope issue; the short-path clone is the reproducible qualification path on this host.
+- `de03605` fixes the clean-clone workspace-test race by making Turbo tests depend on upstream builds, so `@shoppingpal/contracts/dist` exists before web Vitest starts.
+
+## 6. FINAL RECEIPT
+
+The following receipt records executed evidence. `FINAL_HEAD` is the qualified implementation head; the documentation commit containing this receipt is documentation-only and does not change the tested source snapshot.
+
+```text
+SOURCE_BASE=ee032c2461864616df9a1a609b326a3a1409e3c8
+HANDOFF_BASE=c1c96eaeab2ce27e6f1c3f04c8d83ac1aaeb587c
+FINAL_HEAD=de03605ef141b6645680960e389442bf4301097f
+BRANCH=work/architecture-convergence-v1
+WORKTREE_CLEAN=PASS
+
+GATE_A=PASS (19503b0)
+GATE_B=PASS (e533b2d)
+GATE_C=PASS (5dac4c8; receipt b271bc5)
+GATE_D=PASS (c908290)
+GATE_E=PASS (a4fe955)
+GATE_F=PASS (1cab7bf)
+
+MEDUSA_CATALOG=PASS
+MEDUSA_VARIANTS=PASS
+MEDUSA_INVENTORY=PASS
+MEDUSA_CART=PASS
+MEDUSA_CHECKOUT=PASS_WITH_LIMITATION (Medusa payment collection/provider is not configured; no fabricated order/payment)
+MEDUSA_AUTH=PASS
+TYPESENSE=PASS_WITH_LIMITATION (live projection/rehydration/stale-data proof; Docker wget healthcheck remains unhealthy)
+FASTAPI=PASS
+LANGGRAPH=PASS
+LANGCHAIN=PASS_WITH_LIMITATION (structured LangChain runnable boundary qualified; external model routing is optional-by-env)
+EVE=PASS
+SHOPPING_MISSIONS=PASS
+
+LEGACY_COMMERCE_REMOVED=PASS (2545368)
+BETTER_AUTH_REMOVED=PASS (c908290; remaining auth route is Medusa-only compatibility transport)
+TOOLLOOP_AGENT_REMOVED=PASS (1cab7bf)
+
+WEB_LINT=PASS
+WEB_TYPECHECK=PASS
+WEB_UNIT_TESTS=PASS (72)
+WEB_BUILD=PASS
+PYTHON_RUFF=PASS
+PYTHON_PYRIGHT=PASS
+PYTHON_TESTS=PASS (12)
+E2E=PASS_WITH_LIMITATION (Medusa 4 passed/4 skipped; no-env 1 passed/7 skipped)
+CLEAN_CLONE=PASS (SP-clean-final, de03605)
+
+STALE_SEARCH_REVALIDATION=PASS ({"StaleIndexPrice":1,"StaleIndexStock":false,"CanonicalUnder100Product":false,"CanonicalUnder250Product":true,"CanonicalPriceRendered":true,"CanonicalStockRendered":false})
+IDEMPOTENCY=PASS (stable operation_id replay plus Medusa Idempotency-Key path)
+PROMPT_INJECTION_BOUNDARY=PASS (catalog text remains untrusted; mutation unit regression green)
+DEGRADED_OPERATION=PASS_WITH_LIMITATION (browse/static catalog and saved/chat state remain usable; commerce requires Medusa)
+SECRET_AUDIT=PASS (.env files absent; examples contain placeholders only; no live credential patterns)
+
+KNOWN_LIMITATIONS=Medusa payment provider/checkout setup is intentionally incomplete; Typesense container healthcheck lacks wget although /health is 200; static catalog is browse-only without Medusa; PGlite is non-commerce saved/chat persistence only; external model API credentials are optional; E2E skips are intentional viewport/degraded prerequisites.
+```
 
 Servers are stopped after qualification. Medusa :9000 and the Docker trio remain the documented local prerequisites; Typesense is reachable on :8108 but remains Docker-healthcheck-unhealthy because its image lacks the configured `wget` probe.

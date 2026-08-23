@@ -12,4 +12,4 @@ This document records the current implementation boundary; `HANDOFF.md` remains 
 | F | PASS / qualified | `1cab7bf`; FastAPI/Pydantic/LangGraph/LangChain/Eve, Postgres checkpointing, missions, typed UI proxy, canonical cart proposal execution, safety and degraded tests |
 | Legacy removal | PASS / qualified | `2545368`; duplicate web cart/catalog/order/checkout authorities, obsolete schema/migrations, and web Stripe/demo payment path removed; PGlite remains non-commerce only |
 
-Gate F qualification and the post-parity legacy audit are recorded in `HANDOFF.md`. Remaining work is final service/E2E/clean-clone qualification and the exact receipt; no second commerce authority remains in the web runtime.
+Gate F qualification, post-parity legacy removal, and the final service/E2E/clean-clone receipt are recorded in `HANDOFF.md`. `de03605` also makes clean-clone workspace tests deterministic by ordering upstream builds before consumers; no second commerce authority remains in the web runtime.
