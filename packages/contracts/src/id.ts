@@ -2,7 +2,7 @@
  * Deterministic identity shared by every ShoppingPal surface.
  * Product ids must be byte-identical across the static catalog, the
  * commerce database, search projections, and agent payloads — otherwise
- * cross-system references silently break (see Gate A PDP defect).
+ * cross-system references silently break.
  */
 
 function fnv(text: string): number {

@@ -8,15 +8,15 @@ test.describe("Medusa Auth", () => {
     test.skip(testInfo.project.name !== "desktop-chromium", "Single auth flow");
     test.setTimeout(90_000);
 
-    const email = `gate-d-${randomUUID()}@example.test`;
-    const password = "ShoppingPalGateD!2026";
+    const email = `shopper-${randomUUID()}@example.test`;
+    const password = "ShoppingPalTest!2026";
 
     await page.goto("/products/marlowe-pulse-anc-headphones");
     await page.getByRole("button", { name: /^Add .* to cart$/i }).first().click();
     await expect(page.getByTestId("cart-count")).toHaveText("1", { timeout: 15_000 });
 
     await page.goto("/sign-up");
-    await page.getByLabel("Name").fill("Gate D Shopper");
+    await page.getByLabel("Name").fill("Test Shopper");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Create account" }).click();
