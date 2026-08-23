@@ -21,6 +21,13 @@ export interface MedusaConfig {
   regionId?: string;
 }
 
+export type SearchBackend = "catalog" | "typesense";
+
+export interface TypesenseConfig {
+  baseUrl: string;
+  apiKey: string;
+}
+
 let cached: MedusaConfig | null | undefined;
 
 export function getMedusaConfig(): MedusaConfig | null {
@@ -37,4 +44,24 @@ export function getMedusaConfig(): MedusaConfig | null {
 /** True when Medusa owns the commerce domain in this runtime. */
 export function medusaEnabled(): boolean {
   return getMedusaConfig() !== null;
+}
+
+export function searchBackend(): SearchBackend {
+  return process.env.SEARCH_BACKEND?.trim().toLowerCase() === "typesense"
+    ? "typesense"
+    : "catalog";
+}
+
+export function getTypesenseConfig(): TypesenseConfig | null {
+  if (searchBackend() !== "typesense") return null;
+  const parsed = z
+    .object({
+      baseUrl: z.string().url(),
+      apiKey: z.string().min(1),
+    })
+    .safeParse({
+      baseUrl: process.env.TYPESENSE_URL?.trim() || "http://localhost:8108",
+      apiKey: process.env.TYPESENSE_API_KEY?.trim() || "shoppingpal-dev-key",
+    });
+  return parsed.success ? parsed.data : null;
 }

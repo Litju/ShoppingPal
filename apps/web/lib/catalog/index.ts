@@ -2,7 +2,8 @@ import type { CatalogProvider } from "@shoppingpal/contracts";
 import { StaticCatalogProvider } from "@/lib/catalog/static-provider";
 import { PostgresCatalogProvider } from "@/lib/catalog/postgres-provider";
 import { MedusaCatalogProvider } from "@/lib/catalog/medusa-provider";
-import { medusaEnabled } from "@/lib/commerce/config";
+import { TypesenseCatalogProvider } from "@/lib/catalog/typesense-provider";
+import { medusaEnabled, searchBackend } from "@/lib/commerce/config";
 import { databaseConfigured, getDatabase } from "@/lib/db";
 import { ensureSeeded } from "@/lib/db/seed";
 
@@ -32,7 +33,10 @@ let staticProvider: CatalogProvider | null = null;
 
 export async function getCatalogProvider(): Promise<CatalogProvider> {
   if (medusaEnabled()) {
-    return new MedusaCatalogProvider();
+    const canonical = new MedusaCatalogProvider();
+    return searchBackend() === "typesense"
+      ? new TypesenseCatalogProvider(canonical)
+      : canonical;
   }
   if (databaseConfigured()) {
     try {

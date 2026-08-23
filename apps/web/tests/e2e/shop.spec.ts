@@ -17,7 +17,7 @@ test.describe("Shopping Pal desktop flows", () => {
 
     /* 2. Browse a category */
     await page.goto("/products?category=audio");
-    await expect(page.getByTestId("products-heading")).toHaveText("Audio");
+    await expect(page.getByTestId("products-heading").first()).toHaveText("Audio");
     const audioCount = await page.getByTestId("results-count").innerText();
     expect(audioCount).toMatch(/[1-9]/);
 
