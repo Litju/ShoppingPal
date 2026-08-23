@@ -51,10 +51,8 @@ function saveGuestHistory(messages: ShoppingPalMessage[]) {
   }
 }
 
-let conversationIdCounter = 0;
 function newConversationId(): string {
-  conversationIdCounter += 1;
-  return `c-${Date.now().toString(36)}-${conversationIdCounter}`;
+  return crypto.randomUUID();
 }
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {

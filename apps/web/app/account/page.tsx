@@ -16,8 +16,8 @@ export default async function AccountPage() {
         <h1 className="text-2xl font-bold tracking-tight">Account</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Sign in to sync your cart, saved items and Shopping Pal
-          conversations. Everything runs on the embedded demo database until you
-          configure a production one — no setup needed.
+          conversations. Local development can use embedded app state; production
+          uses the configured database and commerce service.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Button asChild variant="outline">

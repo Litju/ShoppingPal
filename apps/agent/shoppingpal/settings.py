@@ -13,6 +13,7 @@ class AgentSettings(BaseModel):
     medusa_region_id: str = ""
     database_url: str = ""
     internal_token: str = ""
+    allow_unauthenticated_local: bool = False
     checkpoint_backend: str = "memory"
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
@@ -25,6 +26,8 @@ class AgentSettings(BaseModel):
             medusa_region_id=os.getenv("MEDUSA_REGION_ID", ""),
             database_url=os.getenv("AGENT_DATABASE_URL", ""),
             internal_token=os.getenv("AGENT_INTERNAL_TOKEN", ""),
+            allow_unauthenticated_local=os.getenv("AGENT_ALLOW_UNAUTHENTICATED_LOCAL", "").lower()
+            in {"1", "true", "yes"},
             checkpoint_backend=os.getenv("AGENT_CHECKPOINT_BACKEND", "memory").lower(),
             host=os.getenv("AGENT_HOST", "127.0.0.1"),
             port=int(os.getenv("AGENT_PORT", "8000")),

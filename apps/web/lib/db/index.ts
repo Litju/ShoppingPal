@@ -121,12 +121,6 @@ export async function ensureSchema(handle: DatabaseHandle): Promise<void> {
 /** Apply the small non-commerce schema without a legacy migration directory. */
 export async function runMigrations(db: Database): Promise<void> {
   const statements = [
-    `ALTER TABLE IF EXISTS "saved_products" DROP CONSTRAINT IF EXISTS "saved_products_user_id_user_id_fk"`,
-    `ALTER TABLE IF EXISTS "saved_products" DROP CONSTRAINT IF EXISTS "saved_products_product_id_products_id_fk"`,
-    `ALTER TABLE IF EXISTS "conversations" DROP CONSTRAINT IF EXISTS "conversations_user_id_user_id_fk"`,
-    `ALTER TABLE IF EXISTS "saved_products" ALTER COLUMN "product_id" TYPE text USING "product_id"::text`,
-    `DROP TABLE IF EXISTS "cart_items", "carts", "order_items", "orders", "products" CASCADE`,
-    `DROP TABLE IF EXISTS "account", "session", "verification", "user" CASCADE`,
     `CREATE TABLE IF NOT EXISTS "saved_products" ("id" uuid PRIMARY KEY NOT NULL, "user_id" text, "guest_token" text, "product_id" text NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS "conversations" ("id" uuid PRIMARY KEY NOT NULL, "user_id" text, "guest_token" text, "title" text DEFAULT 'New conversation' NOT NULL, "context" jsonb DEFAULT '{}'::jsonb NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL, "updated_at" timestamp with time zone DEFAULT now() NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS "messages" ("id" uuid PRIMARY KEY NOT NULL, "conversation_id" uuid NOT NULL REFERENCES "conversations"("id") ON DELETE cascade, "role" text NOT NULL, "parts" jsonb DEFAULT '[]'::jsonb NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL)`,

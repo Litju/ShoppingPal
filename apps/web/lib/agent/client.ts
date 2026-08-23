@@ -99,7 +99,7 @@ function comparisonOutput(products: Array<z.infer<typeof candidateSchema>>, diff
       );
     }
   }
-  highlights.push("These rows are derived from the current canonical Medusa product data.");
+  highlights.push("These rows are derived from the current store catalog data.");
   return {
     products: products.map(toProductSummary),
     rows,
@@ -116,7 +116,7 @@ export async function agentPayloadToUiResult(
   if (payload.kind === "approval_required" && payload.action === "checkout") {
     return {
       events: [],
-      text: "Checkout isn't available right now. Medusa payment setup is required.",
+      text: "Checkout isn't available right now; payment setup is required.",
     };
   }
   if (payload.kind === "recommendations") {
@@ -137,7 +137,7 @@ export async function agentPayloadToUiResult(
         input: { productId: first.product_id },
         output: {
           product: toProductSummary(first),
-          reasons: ["Matches the current request using canonical Medusa catalog data."],
+          reasons: ["Matches the current request using current store catalog data."],
           tradeoffs: [],
           budgetRemaining: null,
           overBudgetBy: null,
@@ -147,8 +147,8 @@ export async function agentPayloadToUiResult(
     return {
       events,
       text: products.data.length
-        ? `I found ${products.data.length} current Medusa-backed option${products.data.length === 1 ? "" : "s"} for you.`
-        : "I couldn't find a current Medusa-backed match for that request.",
+        ? `I found ${products.data.length} current catalog option${products.data.length === 1 ? "" : "s"} for you.`
+        : "I couldn't find a current catalog match for that request.",
     };
   }
 
@@ -199,7 +199,7 @@ export async function agentPayloadToUiResult(
           },
         },
       ],
-      text: "I assembled a current, in-stock bundle from canonical Medusa data.",
+      text: "I assembled a current, in-stock bundle from the store catalog.",
     };
   }
 
@@ -280,11 +280,11 @@ export async function runEveAgent(options: {
 
 export function agentResultText(payload: Record<string, unknown>): string {
   if (payload.kind === "cart_proposal") {
-    return "I prepared that cart action with current Medusa price and inventory. The storefront will apply it and confirm the canonical result.";
+    return "I prepared that cart action with the current price and inventory. The storefront will apply it and confirm the canonical result.";
   }
   if (payload.kind === "approval_required") {
     if (payload.action === "checkout") {
-      return "Checkout isn't available right now. Medusa payment setup is required.";
+      return "Checkout isn't available right now; payment setup is required.";
     }
     return String(payload.message ?? "This action needs your explicit confirmation before it can proceed.");
   }
@@ -294,8 +294,8 @@ export function agentResultText(payload: Record<string, unknown>): string {
   if (payload.kind === "recommendations") {
     const products = Array.isArray(payload.products) ? payload.products : [];
     return products.length
-      ? `I found ${products.length} current Medusa-backed option${products.length === 1 ? "" : "s"} for you.`
-      : "I couldn't find a current Medusa-backed match for that request.";
+      ? `I found ${products.length} current catalog option${products.length === 1 ? "" : "s"} for you.`
+      : "I couldn't find a current catalog match for that request.";
   }
   if (payload.kind === "comparison") return "Here is a current canonical comparison of the matching products.";
   if (payload.kind === "compatibility") return "I checked the matching products against the available canonical specifications.";

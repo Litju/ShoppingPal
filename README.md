@@ -77,7 +77,10 @@ pnpm --filter @shoppingpal/web dev
 
 This mode supports catalog browsing and a deterministic local assistant experience. Commerce actions remain clearly unavailable without Medusa.
 
-For the full local topology, start the services in this order:
+For the full local topology, use the following terminals in order. The search
+projection must run after Medusa is listening:
+
+Terminal 1 — bootstrap and start Medusa:
 
 ```powershell
 docker compose -f infra/docker-compose.yml up -d
@@ -90,11 +93,19 @@ pnpm --dir apps/commerce exec medusa exec ./src/scripts/ensure-publishable-key.t
 # Copy the publishable key printed above and set the seeded region id.
 $env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
 $env:MEDUSA_REGION_ID = "<local-region-id>"
-pnpm --dir apps/commerce run search:sync
 pnpm --dir apps/commerce exec medusa start
 ```
 
-In a second terminal, configure and start the agent. Use the seeded Medusa publishable key and region id from the local service:
+Terminal 2 — sync Typesense from the live Medusa service:
+
+```powershell
+$env:MEDUSA_BACKEND_URL = "http://localhost:9000"
+$env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
+$env:MEDUSA_REGION_ID = "<local-region-id>"
+pnpm --dir apps/commerce run search:sync
+```
+
+Terminal 3 — configure and start the agent. Use the seeded Medusa publishable key and region id from the local service:
 
 ```powershell
 cd apps/agent
@@ -108,7 +119,7 @@ $env:MEDUSA_REGION_ID = "<local-region-id>"
 uv run uvicorn main:app --host 127.0.0.1 --port 8200
 ```
 
-Start the web app with the same service values:
+Terminal 4 — start the web app with the same service values:
 
 ```powershell
 $env:MEDUSA_BACKEND_URL = "http://localhost:9000"

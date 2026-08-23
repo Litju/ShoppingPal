@@ -23,5 +23,19 @@ describe("non-commerce state schema", () => {
     const row = extractRows<{ products: string | null; saved: string | null }>(tables)[0];
     expect(row?.products ?? null).toBeNull();
     expect(row?.saved).toBe("saved_products");
-  });
+  }, 15_000);
+
+  it("does not delete existing commerce tables during app-state setup", async () => {
+    const client = new PGlite();
+    const db = drizzle(client, { schema }) as unknown as Database;
+    await db.execute(sql`create table products (id text primary key)`);
+
+    await runMigrations(db);
+
+    const tables = await db.execute<{ products: string | null }>(
+      sql`select to_regclass('public.products') as products`,
+    );
+    const row = extractRows<{ products: string | null }>(tables)[0];
+    expect(row?.products).toBe("products");
+  }, 15_000);
 });

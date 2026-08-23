@@ -31,6 +31,7 @@ Eve is the in-repository conversational runtime in `apps/agent/shoppingpal/eve`.
 - Typesense is a discovery projection. Search candidates are rehydrated from Medusa before ranking or commerce decisions.
 - The agent service owns workflow state, approval policy, canonical revalidation, and Shopping Mission state. It does not mutate Medusa directly.
 - The web server derives actor-scoped cookies and executes `CartProposal` messages through the canonical Medusa cart provider.
+- The web database creates only saved-item and conversation state; startup never drops commerce or authentication tables.
 - The web database/PGlite runtime stores saved products and conversation messages only. It does not own commerce records.
 
 ## Mutation protocol
