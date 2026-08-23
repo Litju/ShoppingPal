@@ -1,12 +1,12 @@
 # ShoppingPal
 
 <p align="center">
-  <img src="docs/assets/readme/hero-workspace.jpg" alt="A calm product workspace with a laptop and warm desk lighting" width="100%" />
+  <img src="docs/assets/readme/app-home.png" alt="ShoppingPal home screen with the shopping companion prompt and featured catalog" width="100%" />
 </p>
 
-<p align="center"><strong>A grounded shopping companion for finding the right thing without making up the details.</strong></p>
+<p align="center"><strong>An e-commerce web app powered by ShoppingPal: an agent companion from product search to a canonical cart.</strong></p>
 
-ShoppingPal combines a calm storefront with a typed shopping workflow. It can help someone narrow a messy request into useful options, compare tradeoffs, and propose a cart action without letting a language model invent prices, stock, variants, or order state.
+ShoppingPal combines a calm storefront with an agent companion for the shopping journey. It helps narrow a messy request into useful options, compare tradeoffs, and propose a cart action without letting a language model invent prices, stock, variants, or order state.
 
 The authority split is deliberate:
 
@@ -26,9 +26,8 @@ Medusa owns products, variants, prices, inventory, carts, customers, and checkou
 
 <table>
   <tr>
-    <td><img src="docs/assets/readme/headphones.jpg" alt="Over-ear headphones resting on a warm neutral surface" width="100%" /></td>
-    <td><img src="docs/assets/readme/watch.jpg" alt="A simple watch representing considered product choices" width="100%" /></td>
-    <td><img src="docs/assets/readme/laptop-workspace.jpg" alt="A laptop workspace representing the shopping workflow" width="100%" /></td>
+    <td width="50%"><img src="docs/assets/readme/app-catalog.png" alt="ShoppingPal audio catalog screen with filters and product cards" width="100%" /></td>
+    <td width="50%"><img src="docs/assets/readme/app-product.png" alt="ShoppingPal Marlowe product detail screen with price, stock, specs, reviews, and add-to-cart" width="100%" /></td>
   </tr>
 </table>
 
@@ -47,15 +46,15 @@ Conversation and commerce need different authorities. ShoppingPal makes that bou
 
 ## Stack
 
-| Layer | Responsibility |
-| --- | --- |
-| Next.js storefront | Product browsing, PDPs, cart UI, generative commerce UI |
-| Medusa | Canonical commerce state and mutations |
-| Typesense | Search and discovery projection only |
-| FastAPI + Eve | Conversation, session, streaming, approvals, and agent boundary |
-| LangGraph | Explicit ShoppingGraph workflow |
-| LangChain | Model/tool/structured-output primitives |
-| Shopping Missions | Durable shopping objectives independent of chat history |
+| Layer | Technologies | Responsibility |
+| --- | --- | --- |
+| Web storefront | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Radix UI | Product browsing, PDPs, cart UI, and generative commerce UI |
+| Commerce | Medusa 2.19, PostgreSQL 16, Redis 7, Docker Compose | Canonical commerce state and mutations |
+| Search | Typesense 27.1 | Search and discovery projection only |
+| Agent API | Python 3.13, FastAPI, Pydantic v2, Uvicorn | Conversation, sessions, streaming, approvals, and the agent boundary |
+| Agent workflow | Eve, LangGraph, LangChain Core | Session runtime, explicit ShoppingGraph workflow, and model/tool/structured-output primitives |
+| Shopping Missions | PostgreSQL-backed durable domain state | Shopping objectives independent of chat history and checkpoints |
+| Quality and tooling | pnpm 11, Turborepo, Vitest, Playwright, Ruff, Pyright, Pytest | Workspace orchestration, static checks, unit tests, browser tests, and Python validation |
 
 ## Local topology
 
@@ -127,11 +126,10 @@ uv run pytest
 
 The complete executed evidence, gate SHAs, known limitations, and final receipt live in [HANDOFF.md](HANDOFF.md).
 
-## Visual credits
+## Product screenshots
 
-The README photography is stored locally for stable rendering and was sourced from Unsplash. It is product mood imagery, not catalog truth or a claim about the products shown.
+Every image in this README is a real screenshot captured from the local ShoppingPal web app and committed under `docs/assets/readme/`. No stock photography is used.
 
-- [Hero workspace source](https://images.unsplash.com/photo-1498050108023-c5249f4df085)
-- [Headphones source](https://images.unsplash.com/photo-1505740420928-5e560c06d30e)
-- [Watch source](https://images.unsplash.com/photo-1523275335684-37898b6baf30)
-- [Laptop workspace source](https://images.unsplash.com/photo-1516321318423-f06f85e504b3)
+- Home: `/`
+- Audio catalog: `/products?category=audio`
+- Marlowe product detail: `/products/marlowe-pulse-anc-headphones`
