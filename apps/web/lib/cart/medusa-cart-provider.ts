@@ -161,6 +161,7 @@ export class MedusaCartProvider {
     productIdOrVariant: string,
     quantity: number,
     _via: "ui" | "agent" = "ui",
+    operationId?: string,
   ): Promise<CartDTO> {
     void _via;
     const qty = clampQuantity(quantity);
@@ -183,6 +184,7 @@ export class MedusaCartProvider {
       const res = await this.client.post<{ cart: MedusaCart }>(
         `/store/carts/${cartId}/line-items`,
         { variant_id: variant.id, quantity: qty },
+        operationId ? { "Idempotency-Key": operationId } : undefined,
       );
       return this.toDto(res.cart);
     } catch (error) {

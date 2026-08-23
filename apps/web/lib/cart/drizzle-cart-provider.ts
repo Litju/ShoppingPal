@@ -118,7 +118,9 @@ export class DrizzleCartProvider {
     productId: string,
     quantity: number,
     via: "ui" | "agent" = "ui",
+    _operationId?: string,
   ): Promise<CartDTO> {
+    void _operationId;
     const qty = clampQuantity(quantity);
     const product = await this.db
       .select({

@@ -1,17 +1,16 @@
 import {
-  convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  stepCountIs,
-  ToolLoopAgent,
-  type UIMessage,
 } from "ai";
 import { z } from "zod";
 
-import { getSessionUser } from "@/lib/auth/server";
-import { aiConfigured, resolveModel } from "@/lib/ai/model";
-import { createShoppingPalTools } from "@/lib/ai/tools";
-import { buildSystemPrompt } from "@/lib/ai/prompts";
+import { getActorContext, getSessionUser } from "@/lib/auth/server";
+import {
+  agentPayloadToUiResult,
+  getAgentConfig,
+  runEveAgent,
+} from "@/lib/agent/client";
+import { aiConfigured } from "@/lib/ai/model";
 import { streamDemoAgent } from "@/lib/ai/demo-agent";
 import { appendMessage, deriveTitle, upsertConversation } from "@/lib/chat/persist";
 
@@ -77,6 +76,65 @@ export async function POST(request: Request) {
     });
   }
 
+  const agentConfig = getAgentConfig();
+  if (agentConfig) {
+    try {
+      const actor = await getActorContext();
+      const envelopes = await runEveAgent({
+        baseUrl: agentConfig.baseUrl,
+        internalToken: agentConfig.internalToken,
+        actorId: actor?.actorId ?? `guest:${body.conversationId ?? "anon"}`,
+        sessionId: body.conversationId ?? "eve-anon",
+        message: userText,
+        contextProductIds: shortlist.map((entry) => entry.id),
+      });
+      const result = envelopes.find(
+        (envelope) => envelope.event === "graph_result" || envelope.event === "approval_required",
+      );
+      const payload = result?.payload.payload;
+      const uiResult = await agentPayloadToUiResult(
+        payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {},
+        userText,
+      );
+      const stream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          writer.write({ type: "start" });
+          writer.write({ type: "start-step" });
+          if (payload) {
+            writer.write({ type: "data-agent-result", data: payload });
+          }
+          for (const [index, event] of uiResult.events.entries()) {
+            const toolCallId = `eve-call-${Date.now()}-${index}`;
+            writer.write({
+              type: "tool-input-available",
+              toolCallId,
+              toolName: event.name,
+              input: event.input,
+            });
+            writer.write({ type: "tool-output-available", toolCallId, output: event.output });
+          }
+          const id = "eve-result";
+          writer.write({ type: "text-start", id });
+          writer.write({ type: "text-delta", id, delta: uiResult.text });
+          writer.write({ type: "text-end", id });
+          writer.write({ type: "finish-step" });
+          writer.write({ type: "finish" });
+        },
+        onError: () => "The shopping workflow is unavailable right now. The store still works normally.",
+      });
+      if (user && body.conversationId) {
+        await appendMessage({ conversationId: body.conversationId, role: "assistant", parts: [] });
+      }
+      return createUIMessageStreamResponse({ stream });
+    } catch (error) {
+      console.error("[chat] Eve unavailable; preserving degraded storefront:", error);
+      return Response.json(
+        { error: "Shopping Pal is unavailable right now. The store still works normally." },
+        { status: 502 },
+      );
+    }
+  }
+
   /* ── Offline demo agent ────────────────────────────────────────────────── */
   if (!aiConfigured()) {
     const sessionKey = user?.id ?? body.conversationId ?? "anon";
@@ -101,54 +159,11 @@ export async function POST(request: Request) {
     return createUIMessageStreamResponse({ stream });
   }
 
-  /* ── Real LLM agent ────────────────────────────────────────────────────── */
-  try {
-    const model = await resolveModel();
-    if (!model) throw new Error("AI configured but no provider resolved.");
-
-    const tools = createShoppingPalTools();
-    const system = buildSystemPrompt({
-      productName: metadata.productName,
-      productSlug: metadata.productSlug,
-      category: metadata.category,
-      shortlist: shortlist.map((s, i) => ({
-        position: s.position ?? i + 1,
-        title: s.title,
-        id: s.id,
-      })),
-    });
-
-    const agent = new ToolLoopAgent({
-      model,
-      instructions: system,
-      tools,
-      temperature: 0.4,
-      stopWhen: stepCountIs(10),
-    });
-
-    const uiMessages = body.messages as unknown as UIMessage[];
-    const modelMessages = await convertToModelMessages(uiMessages);
-    const result = await agent.stream({
-      messages: modelMessages,
-    });
-
-    return result.toUIMessageStreamResponse({
-      originalMessages: uiMessages,
-      onFinish: async ({ responseMessage }) => {
-        if (user && body.conversationId) {
-          await appendMessage({
-            conversationId: body.conversationId,
-            role: "assistant",
-            parts: (responseMessage?.parts ?? []) as unknown[],
-          });
-        }
-      },
-    });
-  } catch (error) {
-    console.error("[chat] agent failed:", error);
-    return Response.json(
-      { error: "Shopping Pal is unavailable right now. The store still works normally." },
-      { status: 502 },
-    );
-  }
+  // A configured model without the target agent service is not a second
+  // production authority. Keep the conventional store usable and surface a
+  // truthful degraded response until Eve is connected.
+  return Response.json(
+    { error: "Shopping Pal is unavailable right now. The store still works normally." },
+    { status: 502 },
+  );
 }

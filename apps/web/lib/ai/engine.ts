@@ -296,7 +296,14 @@ export async function runGetCart(): Promise<{ cart: CartPayload }> {
   return { cart: await cartPayload() };
 }
 
-export async function runAddToCart(input: z.infer<typeof addToCartInput>): Promise<{
+export async function runAddToCart(
+  input: z.infer<typeof addToCartInput>,
+  guard: {
+    expectedPrice?: number;
+    expectedVariantId?: string;
+    operationId?: string;
+  } = {},
+): Promise<{
   ok: boolean;
   message: string;
   cart: CartPayload | null;
@@ -305,7 +312,17 @@ export async function runAddToCart(input: z.infer<typeof addToCartInput>): Promi
   if (!provider) throw new Error("Cart unavailable");
   const ref = await ensureCartRef();
   const product = await runGetProduct({ slugOrId: input.productId });
-  const cart = await provider.addItem(ref, input.productId, input.quantity, "agent");
+  if (!product.product) throw new Error(product.message ?? "Unknown product.");
+  if (guard.expectedPrice !== undefined && product.product.price !== guard.expectedPrice) {
+    throw new Error("The canonical price changed before the cart action was acknowledged.");
+  }
+  const cart = await provider.addItem(
+    ref,
+    guard.expectedVariantId ?? input.productId,
+    input.quantity,
+    "agent",
+    guard.operationId,
+  );
   return {
     ok: true,
     message: `Added ${quantityPhrase(input.quantity)}${product.product ? ` — ${product.product.title}` : ""} to your cart.`,
