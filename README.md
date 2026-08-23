@@ -85,8 +85,12 @@ docker compose -f infra/docker-compose.yml up -d
 $env:DATABASE_URL = "postgres://shoppingpal:shoppingpal@localhost:5433/shoppingpal"
 pnpm --dir apps/commerce exec medusa db:migrate
 pnpm --dir apps/commerce run db:seed
-pnpm --dir apps/commerce run search:sync
+$env:MEDUSA_BACKEND_URL = "http://localhost:9000"
 pnpm --dir apps/commerce exec medusa exec ./src/scripts/ensure-publishable-key.ts
+# Copy the publishable key printed above and set the seeded region id.
+$env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
+$env:MEDUSA_REGION_ID = "<local-region-id>"
+pnpm --dir apps/commerce run search:sync
 pnpm --dir apps/commerce exec medusa start
 ```
 
