@@ -391,6 +391,6 @@ export async function runPrepareCheckout(): Promise<
 > {
   return {
     ready: false,
-    message: "Checkout isn't available right now. Medusa payment setup is required.",
+    message: "Checkout isn't available right now; payment setup is required.",
   };
 }
