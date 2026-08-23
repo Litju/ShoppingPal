@@ -30,7 +30,15 @@ export class TypesenseCatalogProvider implements CatalogProvider {
         page: 1,
       });
       const ids = (result.hits ?? []).map((hit) => hit.document.id);
+      if (ids.length === 0) {
+        console.warn("[catalog] Typesense returned no candidates; using canonical Medusa search.");
+        return this.canonical.search(query);
+      }
       const hydrated = await this.canonical.getByIds(ids);
+      if (hydrated.length === 0) {
+        console.warn("[catalog] Typesense candidates did not hydrate; using canonical Medusa search.");
+        return this.canonical.search(query);
+      }
       const searchable = new Map(
         hydrated.map((product) => [product.id, buildSearchableText(product)]),
       );

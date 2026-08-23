@@ -148,6 +148,55 @@ function createProvider(client: MedusaClient) {
   return new MedusaCartProvider(client, REGION_ID);
 }
 
+function makeCheckoutClient() {
+  const postCalls: Array<{ path: string; body: unknown }> = [];
+  const cart = {
+    ...emptyCart(),
+    items: [
+      {
+        id: "line_test",
+        title: "Marlowe Pulse ANC Headphones",
+        product_id: "prod_marlowe",
+        product_handle: "marlowe-pulse-anc-headphones",
+        variant_id: "variant_marlowe",
+        quantity: 1,
+        unit_price: 19900,
+      },
+    ],
+    subtotal: 19900,
+    total: 19900,
+  };
+  const client = {
+    get: async <T>(path: string): Promise<T> => {
+      if (path === `/store/carts/${CART_ID}`) return { cart } as T;
+      throw new Error(`Unexpected GET ${path}`);
+    },
+    post: async <T>(path: string, body?: unknown): Promise<T> => {
+      postCalls.push({ path, body });
+      if (path === `/store/carts/${CART_ID}`) return {} as T;
+      if (path === "/store/payment-collections") {
+        return { payment_collection: { id: "paycol_test" } } as T;
+      }
+      if (path === "/store/payment-collections/paycol_test/payment-sessions") {
+        return {
+          payment_collection: {
+            id: "paycol_test",
+            payment_sessions: [
+              {
+                id: "session_test",
+                provider_id: "pp_stripe_stripe",
+                data: { client_secret: "pi_test_secret" },
+              },
+            ],
+          },
+        } as T;
+      }
+      throw new Error(`Unexpected POST ${path}`);
+    },
+  } as unknown as MedusaClient;
+  return { client, postCalls };
+}
+
 describe("MedusaCartProvider variant resolution", () => {
   const previousEnv = {
     backend: process.env.MEDUSA_BACKEND_URL,
@@ -157,7 +206,7 @@ describe("MedusaCartProvider variant resolution", () => {
 
   beforeAll(() => {
     process.env.MEDUSA_BACKEND_URL = "http://localhost:9000";
-    process.env.MEDUSA_PUBLISHABLE_KEY = "pk_test";
+    process.env.MEDUSA_PUBLISHABLE_KEY = "pk_fixture";
     process.env.MEDUSA_REGION_ID = REGION_ID;
   });
 
@@ -213,5 +262,25 @@ describe("MedusaCartProvider variant resolution", () => {
       code: "out_of_stock",
     } satisfies Partial<CartError>);
     expect(postCalls).toHaveLength(0);
+  });
+
+  it("initializes a Stripe payment session from the canonical cart", async () => {
+    const { client, postCalls } = makeCheckoutClient();
+    const session = await createProvider(client).initializeStripeCheckout(ref, {
+      email: "buyer@example.com",
+      firstName: "Test",
+      lastName: "Buyer",
+      address1: "1 Market Street",
+      city: "San Francisco",
+      postalCode: "94105",
+      countryCode: "US",
+    });
+
+    expect(session).toEqual({ cartId: CART_ID, clientSecret: "pi_test_secret" });
+    expect(postCalls.map(({ path }) => path)).toEqual([
+      `/store/carts/${CART_ID}`,
+      "/store/payment-collections",
+      "/store/payment-collections/paycol_test/payment-sessions",
+    ]);
   });
 });

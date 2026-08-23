@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/sheet";
 import { QuantityStepper } from "@/components/commerce/quantity-stepper";
 import { useCart } from "@/components/providers/cart-provider";
-import { startCheckoutAction } from "@/lib/actions/checkout";
 import { formatMoney } from "@shoppingpal/contracts";
 import { Loader2, ShoppingCart } from "lucide-react";
 
@@ -48,6 +48,7 @@ function CartLines() {
 
 export function CartButton() {
   const { cart } = useCart();
+  const router = useRouter();
   const [starting, setStarting] = React.useState(false);
 
   return (
@@ -105,11 +106,9 @@ export function CartButton() {
             size="lg"
             className="mt-4 w-full"
             disabled={cart.lines.length === 0 || starting}
-            onClick={async () => {
+            onClick={() => {
               setStarting(true);
-              const result = await startCheckoutAction();
-              alert(result.error);
-              setStarting(false);
+              router.push("/checkout");
             }}
           >
             {starting && <Loader2 className="animate-spin" />}

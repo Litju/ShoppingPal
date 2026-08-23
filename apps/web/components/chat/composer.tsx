@@ -29,12 +29,6 @@ export function Composer({
       toast.error(
         "Shopping Pal couldn't finish that. Your cart and the store are unaffected — try again.",
       );
-      chat.setMessages((prev) => {
-        // Drop an empty assistant message left behind by a failed stream.
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant" && last.parts.length === 0) return prev.slice(0, -1);
-        return prev;
-      });
       chat.clearError();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

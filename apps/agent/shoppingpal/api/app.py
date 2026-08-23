@@ -7,7 +7,6 @@ from fastapi import FastAPI
 
 from shoppingpal.api.routes import router
 from shoppingpal.domain.missions import InMemoryMissionStore, MissionStore, PostgresMissionStore
-from shoppingpal.eve.runtime import EveRuntime
 from shoppingpal.graph.builder import ShoppingGraph, build_shopping_graph
 from shoppingpal.graph.checkpoint import CheckpointRuntime
 from shoppingpal.retrieval.medusa import CatalogClient, MedusaCatalogClient
@@ -21,14 +20,12 @@ class AgentRuntime:
     catalog: CatalogClient
     checkpoints: CheckpointRuntime
     graph: ShoppingGraph | None = None
-    eve: EveRuntime | None = None
 
     async def start(self) -> None:
         if isinstance(self.missions, PostgresMissionStore):
             await self.missions.start()
         saver = await self.checkpoints.start()
         self.graph = build_shopping_graph(self.catalog, self.missions, saver)
-        self.eve = EveRuntime(self.graph)
 
     async def close(self) -> None:
         if isinstance(self.missions, PostgresMissionStore):
@@ -39,11 +36,6 @@ class AgentRuntime:
         if self.graph is None:
             raise RuntimeError("agent runtime has not started")
         return self.graph
-
-    def require_eve(self) -> EveRuntime:
-        if self.eve is None:
-            raise RuntimeError("Eve runtime has not started")
-        return self.eve
 
 
 def _runtime(
@@ -88,7 +80,7 @@ def create_app(
     app = FastAPI(
         title="ShoppingPal Agent",
         version="0.1.0",
-        description="Eve conversational runtime over an explicit LangGraph shopping workflow.",
+        description="Typed LangGraph shopping workflow for the official Eve web agent.",
         lifespan=lifespan,
     )
     app.state.runtime = runtime

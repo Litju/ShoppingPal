@@ -391,6 +391,6 @@ export async function runPrepareCheckout(): Promise<
 > {
   return {
     ready: false,
-    message: "Checkout isn't available right now; payment setup is required.",
+    message: "Open the secure checkout page to enter your shipping and payment details.",
   };
 }

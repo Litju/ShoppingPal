@@ -29,7 +29,7 @@ export function AssistantConversation({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => chat.setMessages([])}
+          onClick={() => chat.reset()}
           aria-label="Start a new conversation"
         >
           <Plus /> New

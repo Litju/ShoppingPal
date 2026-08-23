@@ -2,19 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { ProductImage } from "@/components/commerce/product-image";
 import { QuantityStepper } from "@/components/commerce/quantity-stepper";
 import { useCart } from "@/components/providers/cart-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { startCheckoutAction } from "@/lib/actions/checkout";
 import { formatMoney } from "@shoppingpal/contracts";
 import { cn } from "@/lib/utils";
 
 export function CartView({ compact = false }: { compact?: boolean }) {
   const { cart, ready, removeItem, pendingProductId } = useCart();
+  const router = useRouter();
   const [starting, setStarting] = React.useState(false);
 
   if (!ready) {
@@ -41,11 +41,9 @@ export function CartView({ compact = false }: { compact?: boolean }) {
     );
   }
 
-  async function checkout() {
+  function checkout() {
     setStarting(true);
-    const result = await startCheckoutAction();
-    toast.error(result.error);
-    setStarting(false);
+    router.push("/checkout");
   }
 
   return (

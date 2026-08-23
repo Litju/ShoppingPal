@@ -11,6 +11,6 @@ export async function GET() {
   return NextResponse.json({
     authEnabled,
     googleEnabled: false,
-    checkoutEnabled: false,
+    checkoutEnabled: authEnabled && Boolean(process.env.NEXT_PUBLIC_STRIPE_PK?.trim()),
   });
 }

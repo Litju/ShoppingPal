@@ -356,6 +356,8 @@ def make_nodes(catalog: CatalogClient, missions: MissionStore) -> dict[str, Node
                 "product_id": candidate.product_id,
                 "variant_id": candidate.variant_id,
                 "quantity": proposal.quantity,
+                "expected_price": candidate.price,
+                "currency": candidate.currency,
                 "canonical_revision": revision,
                 "requires_ui_execution": True,
             },

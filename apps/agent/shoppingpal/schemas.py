@@ -193,7 +193,7 @@ class ShoppingMission(BaseModel):
 
 class GraphRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
-    session_id: str = Field(default_factory=lambda: f"eve_{uuid4().hex}", min_length=1, max_length=120)
+    session_id: str = Field(default_factory=lambda: f"graph_{uuid4().hex}", min_length=1, max_length=120)
     mission_id: str | None = Field(default=None, max_length=120)
     graph_run_id: str | None = Field(default=None, max_length=120)
     context_product_ids: list[str] = Field(default_factory=list, max_length=12)
@@ -209,16 +209,3 @@ class GraphResponse(BaseModel):
     proposed_action: CartProposal | None = None
     approval_required: bool = False
     degraded: bool = False
-
-
-class EveMessageRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=2000)
-    mission_id: str | None = Field(default=None, max_length=120)
-    context_product_ids: list[str] = Field(default_factory=list, max_length=12)
-
-
-class EveEnvelope(BaseModel):
-    event: Literal["session_started", "graph_result", "approval_required", "error"]
-    correlation_id: str
-    session_id: str
-    payload: dict[str, Any]

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { getSessionUser } from "@/lib/auth/server";
+import { runAddToCart as runAgentAddToCart } from "@/lib/ai/engine";
 import { MEDUSA_CUSTOMER_COOKIE } from "@/lib/auth/server";
 import {
   ensureCartRef,
@@ -54,6 +55,61 @@ export async function addToCartAction(
     }
     console.error("[cart] add failed:", error);
     return { ok: false, error: "Could not add to cart." };
+  }
+}
+
+export async function applyAgentCartAction(input: {
+  action: "add" | "remove" | "update";
+  productId: string;
+  variantId: string;
+  quantity: number;
+  expectedPrice: number;
+  operationId: string;
+}): Promise<{ ok: boolean; message: string; cart: CartDTO | null }> {
+  if (
+    !input.productId ||
+    !input.variantId ||
+    !input.operationId ||
+    !Number.isInteger(input.quantity) ||
+    input.quantity < 1 ||
+    input.quantity > 10 ||
+    !Number.isInteger(input.expectedPrice) ||
+    input.expectedPrice < 0
+  ) {
+    return { ok: false, message: "The canonical cart action was rejected.", cart: null };
+  }
+
+  try {
+    if (input.action === "add") {
+      const result = await runAgentAddToCart(
+        { productId: input.productId, quantity: input.quantity },
+        {
+          expectedPrice: input.expectedPrice,
+          expectedVariantId: input.variantId,
+          operationId: input.operationId,
+        },
+      );
+      return result;
+    }
+    const provider = await getCartProvider();
+    if (!provider) return { ok: false, message: "Cart unavailable.", cart: null };
+    const ref = await ensureCartRef();
+    const cart =
+      input.action === "remove"
+        ? await provider.removeItem(ref, input.productId)
+        : await provider.setItemQuantity(ref, input.productId, input.quantity);
+    revalidatePath("/", "layout");
+    return {
+      ok: true,
+      message: input.action === "remove" ? "Removed from your canonical cart." : "Your canonical cart was updated.",
+      cart,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "The canonical cart rejected the action.",
+      cart: null,
+    };
   }
 }
 

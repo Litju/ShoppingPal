@@ -1,17 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { useEveAgent } from "eve/react";
 
-import {
-  extractShortlist,
-  type ChatMessageMetadata,
-  type ShoppingPalMessage,
-} from "@/components/chat/types";
+import type { ChatMessageMetadata, ShoppingPalMessage } from "@/components/chat/types";
+import { extractShortlist } from "@/components/chat/types";
+
+type ChatSession = {
+  messages: readonly ShoppingPalMessage[];
+  status: "error" | "ready" | "streaming" | "submitted";
+  error?: Error;
+  clearError: () => void;
+  stop: () => Promise<void>;
+  reset: () => void;
+};
 
 export interface ChatController {
-  chat: ReturnType<typeof useChat<ShoppingPalMessage>>;
+  chat: ChatSession;
   isOpen: boolean;
   open: () => void;
   close: () => void;
@@ -28,80 +33,51 @@ export function usePal(): ChatController {
   return ctx;
 }
 
-const GUEST_HISTORY_KEY = "sp_guest_chat_v1";
-
-function loadGuestHistory(): ShoppingPalMessage[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.sessionStorage.getItem(GUEST_HISTORY_KEY);
-    return raw ? (JSON.parse(raw) as ShoppingPalMessage[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveGuestHistory(messages: ShoppingPalMessage[]) {
-  try {
-    window.sessionStorage.setItem(
-      GUEST_HISTORY_KEY,
-      JSON.stringify(messages.slice(-30)),
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
-function newConversationId(): string {
-  return crypto.randomUUID();
-}
-
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setOpen] = React.useState(false);
+  const [lastError, setLastError] = React.useState<Error>();
   const pageContextRef = React.useRef<ChatMessageMetadata["pageContext"]>(undefined);
-  const conversationIdRef = React.useRef(newConversationId());
+  const eve = useEveAgent();
+  const messages = eve.data.messages;
+  const shortlist = React.useMemo(() => extractShortlist(messages), [messages]);
 
-  const transport = React.useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        body: () => ({ conversationId: conversationIdRef.current }),
-      }),
-    [],
-  );
-
-  const chat = useChat<ShoppingPalMessage>({
-    transport,
-    messages: loadGuestHistory(),
-  });
-
-  // Persist guest history (session-scoped).
   React.useEffect(() => {
-    if (chat.status === "ready" && chat.messages.length > 0) {
-      saveGuestHistory(chat.messages);
-    }
-  }, [chat.messages, chat.status]);
-
-  const shortlist = React.useMemo(
-    () => extractShortlist(chat.messages),
-    [chat.messages],
-  );
+    if (eve.error) setLastError(eve.error);
+  }, [eve.error]);
 
   const send = React.useCallback(
     (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || chat.status === "submitted" || chat.status === "streaming") {
-        return;
-      }
-      void chat.sendMessage({
-        text: trimmed,
-        metadata: {
-          pageContext: pageContextRef.current,
-          shortlist,
-        },
-      });
+      if (!trimmed || eve.status === "submitted" || eve.status === "streaming") return;
+      setLastError(undefined);
+      void eve
+        .send(trimmed, {
+          clientContext: {
+            pageContext: pageContextRef.current ?? null,
+            shortlist,
+          },
+        })
+        .catch(setLastError);
       setOpen(true);
     },
-    [chat, shortlist],
+    [eve, shortlist],
+  );
+
+  const chat = React.useMemo<ChatSession>(
+    () => ({
+      messages,
+      status: eve.status,
+      error: lastError,
+      clearError: () => setLastError(undefined),
+      stop: async () => {
+        await eve.cancel();
+      },
+      reset: () => {
+        setLastError(undefined);
+        eve.reset();
+      },
+    }),
+    [eve, lastError, messages],
   );
 
   const setPageContext = React.useCallback(
@@ -117,7 +93,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       isOpen,
       open: () => setOpen(true),
       close: () => setOpen(false),
-      toggle: () => setOpen((v) => !v),
+      toggle: () => setOpen((value) => !value),
       send,
       setPageContext,
     }),

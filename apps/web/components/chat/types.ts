@@ -1,6 +1,4 @@
-import type { InferUITools, UIMessage } from "ai";
-
-import type { ShoppingPalTools } from "@/lib/ai/tools";
+import type { EveMessage } from "eve/react";
 
 export interface ChatMessageMetadata {
   pageContext?: {
@@ -12,12 +10,7 @@ export interface ChatMessageMetadata {
   shortlist?: Array<{ position: number; title: string; id: string }>;
 }
 
-export type ChatUITools = InferUITools<ShoppingPalTools>;
-export type ShoppingPalMessage = UIMessage<
-  ChatMessageMetadata,
-  never,
-  ChatUITools
->;
+export type ShoppingPalMessage = EveMessage;
 
 export const SUGGESTED_PROMPTS_HOME = [
   "Best headphones under $250 for gym and commuting",
@@ -25,54 +18,68 @@ export const SUGGESTED_PROMPTS_HOME = [
   "Build me the best home gym setup under $1,000",
 ];
 
+type ToolPart = {
+  type: string;
+  toolName?: string;
+  state?: string;
+  output?: unknown;
+};
+
+type ToolRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is ToolRecord {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): ToolRecord {
+  return isRecord(value) ? value : {};
+}
+
+function asRecords(value: unknown): ToolRecord[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function toolName(part: ToolPart): string {
+  return part.type === "dynamic-tool"
+    ? String(part.toolName ?? "")
+    : part.type.replace(/^tool-/, "");
+}
+
 export function extractShortlist(
-  messages: ShoppingPalMessage[],
+  messages: readonly ShoppingPalMessage[],
 ): Array<{ position: number; title: string; id: string }> {
   const entries: Array<{ position: number; title: string; id: string }> = [];
   const seen = new Set<string>();
+
   for (const message of messages) {
     if (message.role !== "assistant") continue;
-    for (const part of message.parts) {
-      if (
-        (part.type === "tool-searchProducts" ||
-          part.type === "tool-findAlternatives") &&
-        part.state === "output-available"
-      ) {
-        const products =
-          "products" in part.output
-            ? (part.output.products as Array<{ id: string; title: string }>)
-            : [];
-        for (const p of products ?? []) {
-          if (!seen.has(p.id)) {
-            seen.add(p.id);
-            entries.push({ position: seen.size, title: p.title, id: p.id });
-          }
-        }
-      }
-      if (part.type === "tool-recommendProduct" && part.state === "output-available") {
-        const p = part.output.product;
-        if (p && !seen.has(p.id)) {
-          seen.add(p.id);
-          entries.push({ position: seen.size, title: p.title, id: p.id });
-        }
-      }
-      if (part.type === "tool-buildBundle" && part.state === "output-available") {
-        for (const item of part.output.items) {
-          if (!seen.has(item.id)) {
-            seen.add(item.id);
-            entries.push({ position: seen.size, title: item.title, id: item.id });
-          }
-        }
+    for (const part of message.parts as readonly ToolPart[]) {
+      if (part.state !== "output-available") continue;
+      const output = asRecord(part.output);
+      const payload = asRecord(output.payload ?? output);
+      const products = [
+        ...asRecords(payload.products),
+        ...asRecords(payload.items),
+        ...(isRecord(payload.product) ? [payload.product] : []),
+      ];
+      for (const product of products) {
+        const id = product.id ?? product.product_id;
+        const title = product.title;
+        if (typeof id !== "string" || typeof title !== "string" || seen.has(id)) continue;
+        seen.add(id);
+        entries.push({ position: seen.size, title, id });
       }
     }
   }
+
   return entries.slice(-8);
 }
 
-/** Extract plain text from a message's text parts. */
 export function messageText(message: ShoppingPalMessage): string {
   return message.parts
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
+    .filter((part): part is { type: "text"; text: string } => part.type === "text")
+    .map((part) => part.text)
     .join("");
 }
+
+export { toolName };

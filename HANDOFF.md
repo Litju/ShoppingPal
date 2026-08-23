@@ -1,31 +1,76 @@
 # ShoppingPal release handoff
 
-This document is the public operational companion to the [README](README.md). It describes the current runtime, the local service order, the qualification commands, and the known boundaries of the project.
+This document records the implementation snapshot and separates local qualification from external deployment qualification. A skipped live check is not reported as a pass.
 
 ## Runtime summary
 
-ShoppingPal is an agent-assisted commerce platform. The Next.js storefront calls the in-repository Eve runtime through FastAPI; Eve invokes the typed LangGraph ShoppingGraph. Typesense accelerates discovery, while Medusa remains the canonical source for product, variant, price, inventory, customer, cart, checkout, payment, and order state.
+The Next.js storefront hosts the official Eve runtime in `apps/web/agent`. Its `run_shopping_graph` tool calls the FastAPI service, which exposes the typed LangGraph `ShoppingGraph` boundary. Typesense accelerates discovery; Medusa remains the authority for products, variants, prices, inventory, carts, checkout, payments, and orders.
 
-The agent returns typed recommendations and `CartProposal` messages. The web server derives actor scope, revalidates the proposal against Medusa, executes the idempotent cart mutation, and sends the canonical acknowledgement to the UI. Shopping Missions live independently from conversation history and graph checkpoints.
+Cart proposals are revalidated against canonical Medusa state before mutation. Checkout uses the Medusa v2 payment-session flow with Stripe: the server initializes the session, the browser confirms the client secret, and the server completes the cart before showing an order reference.
 
 ## Service prerequisites
 
 | Service | Local endpoint | Required for |
 | --- | --- | --- |
-| Web | `:3000` or `:3100` | Storefront |
+| Web | `:3000` or `:3100` | Storefront and Eve UI |
 | PostgreSQL | `:5433` | Medusa and agent persistence |
 | Redis | `:6379` | Medusa |
 | Typesense | `:8108` | Live discovery projection |
-| Medusa | `:9000` | Auth, cart, checkout, and canonical commerce |
-| Agent | `:8200` | Eve and ShoppingGraph workflows |
+| Medusa | `:9000` | Canonical commerce and Stripe sessions |
+| Agent | `:8200` | LangGraph tool calls |
+| Stripe test account | external | Payment confirmation and webhooks |
+| AI Gateway | external | Hosted Eve model calls |
 
-The storefront can run without the service prerequisites in browse-only degraded mode. The deterministic web assistant can run without model credentials. Neither mode fabricates commerce or payment results.
+The storefront has a browse-only degraded mode. The deterministic fallback may answer local demo prompts without model credentials, but it never fabricates payment, order, or canonical commerce results.
 
-## Startup
+## Qualification receipt
 
-Follow the commands in [README.md](README.md) and the service notes in [docs/OPERATIONS.md](docs/OPERATIONS.md). Keep service credentials in ignored local environment files. The committed examples contain placeholders only.
+```text
+SHOPPINGPAL_PUBLIC_PORTFOLIO_RELEASE
 
-## Qualification commands
+SOURCE_HEAD=ca615029ff6ba45295ab7410a68f0f07ec68cd6a
+RELEASE_COMMIT=SEE_GIT_LOG
+RELEASE_TAG=NOT_CREATED
+
+OFFICIAL_EVE=PASS (eve 0.44.3; Next.js integration builds)
+FASTAPI_GRAPH_BOUNDARY=PASS
+MEDUSA_PACKAGE_BUILD=PASS
+STRIPE_TEST_PAYMENT=NOT_RUN (no configured live commerce environment)
+CANONICAL_ORDER=NOT_RUN
+TYPESENSE_LIVE_SYNC=NOT_RUN
+HOSTED_DEPLOYMENT=NOT_RUN
+
+WEB_LINT=PASS (existing Next pages-directory warning only)
+WEB_TYPECHECK=PASS
+WEB_TESTS=PASS (75)
+WEB_BUILD=PASS
+PYTHON_RUFF=PASS
+PYTHON_PYRIGHT=PASS
+PYTHON_TESTS=PASS (12 passed, 2 skipped)
+LIVE_E2E=NOT_RUN (requires Medusa, agent, and Stripe test configuration)
+DEGRADED_E2E=PASS (1 passed, 7 skipped)
+CLEAN_CLONE=NOT_RUN
+
+PUBLIC_RELEASE_READY=BLOCKED_ON_EXTERNAL_PROVISIONING
+```
+
+The checks above were run from this working tree. The browser suite contains explicit skips for absent live services; those skips do not qualify checkout, payment, order creation, or hosted deployment.
+
+## External release actions
+
+Provision and configure these before calling the release live:
+
+1. Postgres/Redis for the agent and Medusa.
+2. A public FastAPI deployment for `apps/agent`, with `AGENT_INTERNAL_TOKEN` shared only with the web app and agent.
+3. A Medusa deployment with its database, Redis, publishable key, region, and Stripe test provider.
+4. Typesense and a completed catalog sync from Medusa.
+5. Stripe test keys and webhook secret; set `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CAPTURE`, and the web `NEXT_PUBLIC_STRIPE_PK`.
+6. AI Gateway access through `AI_GATEWAY_API_KEY`; set `SHOPPINGPAL_AGENT_MODEL` only to a model available to that account.
+7. Vercel environment variables for the web app, then a production build and live Playwright run.
+
+Keep secrets in the hosting providers and ignored local environment files. The committed `.env.example` files contain placeholders only.
+
+## Local commands
 
 ```powershell
 pnpm install --frozen-lockfile
@@ -44,63 +89,4 @@ uv run pyright
 uv run pytest
 ```
 
-Live qualification also covers Medusa catalog/auth/cart behavior, Typesense projection and canonical rehydration, Eve events, Shopping Mission persistence, idempotent proposals, degraded operation, and the explicit checkout limitation when no payment provider is configured.
-
-## Qualification receipt
-
-The `FINAL_HEAD` below is the qualified implementation snapshot. The commit
-that records this receipt changes only this handoff document.
-
-```text
-SHOPPINGPAL_PUBLIC_PORTFOLIO_RELEASE
-
-SOURCE_HEAD=f89edcec5544ac67baa97d6bdc77fa2780b51e31
-FINAL_HEAD=06ec120962f6b933d22fd5ca3d7cf86f94c9c1a9
-RELEASE_TAG=NOT_CREATED
-WORKTREE_CLEAN=PASS
-
-PRODUCT_RUNTIME=PASS
-OFFICIAL_EVE=PASS
-AGENT_MODEL=PASS_WITH_LIMITATION
-LANGGRAPH=PASS
-MEDUSA=PASS
-TYPESENSE=PASS_WITH_LIMITATION
-STRIPE_TEST_PAYMENT=NOT_RUN
-CANONICAL_ORDER=NOT_RUN
-
-DEVELOPMENT_AGENT_TRACE_AUDIT=PASS
-INTERNAL_NAMING_AUDIT=PASS
-MODEL_PROVIDER_UI_LEAKAGE=PASS
-PROMPT_AUDIT=PASS
-SOURCE_COMMENT_AUDIT=PASS
-DEPENDENCY_AUDIT=PASS
-DEAD_CODE_AUDIT=PASS_WITH_LIMITATION
-PUBLIC_DOCS=PASS
-ARCHITECTURE_DOC=PASS
-ENV_CONTRACT=PASS
-PERSONAL_DATA_AUDIT=PASS
-SECRET_TREE_AUDIT=PASS
-SECRET_HISTORY_AUDIT=PASS_WITH_LIMITATION
-
-DESKTOP_UX=PASS
-MOBILE_UX=PASS
-ACCESSIBILITY=PASS_WITH_LIMITATION
-DEGRADED_MODE=PASS
-
-WEB_LINT=PASS
-WEB_TYPECHECK=PASS
-WEB_TESTS=PASS (73)
-WEB_BUILD=PASS
-PYTHON_RUFF=PASS
-PYTHON_PYRIGHT=PASS
-PYTHON_TESTS=PASS (12 passed, 2 skipped)
-EVE_EVALS=PASS
-E2E=PASS (live 4 passed, 4 skipped; degraded 1 passed, 7 skipped)
-STRIPE_E2E=PASS_WITH_LIMITATION
-CLEAN_CLONE=PASS
-
-PUBLIC_RELEASE_READY=PASS_WITH_LIMITATIONS
-KNOWN_LIMITATIONS=Stripe is intentionally unconfigured; checkout returns an explicit 503 and no order is created. External model credentials are optional, so the deterministic structured fallback is the default. Typesense `/health` and sync passed, but the local Docker healthcheck reports unhealthy because its image lacks the probe binary. Historical commits retain a local publishable key and earlier release wording; no private secret was found and public history was not rewritten.
-```
-
-Checkout is `PASS_WITH_LIMITATION` until a payment provider is configured. The static catalog is browse-only without the commerce service, external model credentials are optional, and browser skips are expected for unavailable service prerequisites.
+See [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and [docs/OPERATIONS.md](docs/OPERATIONS.md) for topology, authority boundaries, and startup order.

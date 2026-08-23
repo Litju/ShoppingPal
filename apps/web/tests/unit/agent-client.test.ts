@@ -62,7 +62,7 @@ describe("Eve result adapter", () => {
     );
 
     expect(checkout.events).toHaveLength(0);
-    expect(checkout.text).toContain("payment setup is required");
+    expect(checkout.text).toContain("secure checkout page");
     expect(rejected.events).toHaveLength(0);
     expect(rejected.text).toBe("not purchasable");
   });

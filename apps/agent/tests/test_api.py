@@ -36,7 +36,7 @@ def test_api_requires_internal_boundary_and_scopes_missions() -> None:
         assert app.get(f"/api/v1/missions/{mission_id}", headers=headers("customer_2")).status_code == 404
 
 
-def test_api_graph_and_eve_return_typed_results() -> None:
+def test_api_graph_returns_typed_results() -> None:
     with client() as app:
         graph = app.post(
             "/api/v1/graph/runs",
@@ -46,22 +46,13 @@ def test_api_graph_and_eve_return_typed_results() -> None:
         assert graph.status_code == 200
         assert graph.json()["correlation_id"] == "corr-api"
         assert graph.json()["payload"]["products"][0]["price"] == 19900
-
-        eve = app.post(
+        assert app.get("/api/v1/health").json()["runtime"] == "langgraph-shoppinggraph"
+        removed_route = app.post(
             "/api/v1/eve/sessions/eve-api/messages",
             headers=headers(),
             json={"message": "compare headphones"},
         )
-        assert eve.status_code == 200
-        assert eve.json()[-1]["event"] == "graph_result"
-
-        stream = app.post(
-            "/api/v1/eve/sessions/eve-api/stream",
-            headers=headers(),
-            json={"message": "recommend headphones"},
-        )
-        assert stream.status_code == 200
-        assert "event: graph_result" in stream.text
+        assert removed_route.status_code == 404
 
 
 def test_api_rejects_missing_boundary_configuration() -> None:
