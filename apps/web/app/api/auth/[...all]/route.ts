@@ -14,7 +14,7 @@ function unavailable() {
   return Response.json(
     {
       error: "auth_unavailable",
-      message: "Authentication needs a configured Medusa commerce backend.",
+      message: "Authentication needs a configured commerce backend.",
     },
     { status: 503 },
   );

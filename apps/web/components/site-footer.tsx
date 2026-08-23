@@ -61,7 +61,7 @@ export function SiteFooter() {
         </div>
         <p className="mt-10 border-t border-border pt-6 text-xs text-muted-foreground">
           © {new Date().getFullYear()} Shopping Pal. A demo storefront — every brand and product is fictional.
-          Prices in USD. Checkout requires a configured Medusa payment provider.
+          Prices in USD. Checkout requires a configured payment provider.
         </p>
       </div>
     </footer>

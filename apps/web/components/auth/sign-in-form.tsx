@@ -42,7 +42,7 @@ export function SignInForm() {
       router.push("/account");
       router.refresh();
     } catch {
-      setError("Sign-in is unavailable in demo mode. Add a DATABASE_URL to enable accounts.");
+      setError("Sign-in is unavailable right now. Configure the commerce service to enable accounts.");
     } finally {
       setBusy(false);
     }
@@ -91,7 +91,7 @@ export function SignInForm() {
         variant="outline"
         className="w-full"
         disabled={!googleEnabled}
-        title={googleEnabled ? undefined : "Add GOOGLE_CLIENT_ID/SECRET to enable Google sign-in"}
+        title={googleEnabled ? undefined : "Google sign-in is not configured"}
         onClick={() => {
           if (!googleEnabled) return;
           void signInWithGoogle("/account").then((r) => {
