@@ -16,6 +16,8 @@ e533b2d  Gate B: monorepo convergence                      <- DONE
 b271bc5  docs: record Gate C qualification                    <- DONE
 c908290  Gate D: Medusa Auth cutover                          <- DONE
 a4fe955  Gate E: Typesense discovery projection                <- DONE
+1cab7bf  Gate F: FastAPI shopping graph and Eve runtime        <- DONE
+2545368  Legacy: remove duplicate web commerce authorities     <- DONE
 ```
 
 ---
@@ -53,7 +55,7 @@ DONE:
 - Publishable key: `pk_7327ddf3c97c65cb62984c1d43e2271968e9d273d85d73e2936f7e31e8f5f246` (reprint: `pnpm exec medusa exec ./src/scripts/ensure-publishable-key.ts`)
 - API smoke proven: store product fetch w/ price ($129900 = $1,299.00 ✓), cart create, add line item qty 2 → subtotal 259800 ✓, update qty ✓.
 - Web adapters written:
-  - `apps/web/lib/commerce/config.ts` — strangler switch: `MEDUSA_BACKEND_URL`+`MEDUSA_PUBLISHABLE_KEY`(+`MEDUSA_REGION_ID`) set ⇒ Medusa mode; unset ⇒ legacy demo stack.
+  - `apps/web/lib/commerce/config.ts` — Medusa mode when configured; unset ⇒ browse-only static degraded mode.
   - `lib/commerce/medusa-client.ts` — typed Store API client.
   - `lib/catalog/medusa-provider.ts` — full CatalogProvider impl; **must always pass explicit `fields=` including `metadata` and variant inventory/price fields** (store defaults omit them; missing metadata broke PDPs once already).
   - `lib/cart/medusa-cart-provider.ts` — same surface as DrizzleCartProvider; guest cookie carries the Medusa cart id; `attachCustomer(cartId, token)` ready for Gate D; legacy-compatible `mergeGuestCart`.
@@ -61,8 +63,8 @@ DONE:
 - Browser-verified: PDP add-to-cart against live Medusa updates badge ("Open cart, 1 item") for tidepool-sprint-2-earbuds.
 - Root cause of the non-total variant resolution was confirmed: product detail requests omitted the required `region_id` pricing context, and the variant fallback used Medusa's invalid `variants[]=` query shape. Both failures were swallowed as `undefined` by the adapter. The resolver now passes the configured region on every product lookup, uses `variants.id[]=` for variant lookup, and selects the exact matching variant before falling back to the product default.
 - Regression coverage: `apps/web/tests/unit/medusa-cart-provider.test.ts` covers Tidepool (previously working), Marlowe (previously failing), an invalid product, and an out-of-stock product; invalid and non-purchasable variants never reach the cart mutation.
-- Qualification evidence: fresh `pnpm --filter @shoppingpal/web build` PASS; Medusa-mode `pnpm --filter @shoppingpal/web test:e2e` PASS (3 executed, 3 viewport-skipped); no-env legacy `pnpm --filter @shoppingpal/web test:e2e` PASS (3 executed, 3 viewport-skipped); root `pnpm lint`, `pnpm typecheck`, and `pnpm test` PASS (66 unit tests).
-- Medusa checkout remains explicitly degraded, not falsely successful: native `POST /store/carts/{id}/complete` returned `400 Payment collection has not been initiated for cart` because no payment provider is configured. Medusa-mode checkout reports `Checkout isn't available right now. Medusa payment setup is required.` The legacy demo checkout remains green until its later removal gate.
+- Historical qualification evidence: fresh `pnpm --filter @shoppingpal/web build` PASS; Medusa-mode and no-env E2E passed before the later Gate F/legacy-removal changes. Current final qualification is recorded below.
+- Medusa checkout remains explicitly degraded, not falsely successful: native `POST /store/carts/{id}/complete` returned `400 Payment collection has not been initiated for cart` because no payment provider is configured. Checkout reports `Checkout isn't available right now. Medusa payment setup is required.` The legacy demo checkout was removed after parity in `2545368`.
 
 ---
 
@@ -116,7 +118,7 @@ pnpm exec medusa start      # :9000, admin disabled
 - Replace `apps/web/lib/auth/server.ts` internals: `getSessionUser()` reads `sp_customer` httpOnly cookie → verifies JWT against `/store/customers/me`, returns `{id,email,name}`. Keep the same exported surface so UI unchanged.
 - Sign-up/sign-in server actions call Medusa auth routes server-to-server; set cookie; then `mergeGuestCartAction` uses `MedusaCartProvider.attachCustomer(guestCartId, jwt)` for guest→user continuity (endpoint exists, implemented).
 - Define `ActorContext` in packages/contracts per spec §12; derive server-side only (browser never sends privileged fields).
-- DELETE Better Auth after parity: remove deps `better-auth`, files `lib/auth/client.ts`(rewrite thin), `app/api/auth/[...all]`, Better Auth tables from `db/schema.ts` (legacy schema dies fully in Gate L anyway), sign-in/up forms keep same UX but new actions.
+- DELETE Better Auth after parity: remove deps `better-auth`, files `lib/auth/client.ts`(rewrite thin), `app/api/auth/[...all]`, and Better Auth tables from `db/schema.ts`; sign-in/up forms keep the same UX with Medusa Auth actions. This was completed in `c908290` and the remaining commerce tables were removed in `2545368`.
 - Evidence: Medusa customer register/login/logout, guest→customer cart continuity, ActorContext mapping, account/orders behavior, and auth E2E passed. Better Auth is no longer a production authority.
 
 ### Gate E — Typesense projection ✅ (`a4fe955`)
@@ -125,7 +127,7 @@ pnpm exec medusa start      # :9000, admin disabled
 - Web search seam: extend `lib/commerce/config.ts` with `SEARCH_BACKEND=typesense|catalog` ; when typesense, `getCatalogProvider().search()` routes keyword/facet queries through Typesense then REHYDRATES canonical state from Medusa (`getByIds`) before returning — invariant §13/§I. Stale-index tests: mutate Typesense doc directly (wrong price/stock) → assert purchase-path output uses Medusa values.
 - Evidence: live Medusa→Typesense sync imported 86 products; search candidates rehydrate from Medusa; stale price and stock were rejected by canonical filters; Typesense-unavailable fallback remained canonical. Static checks and Medusa/Typesense E2E passed.
 
-### Gate F — apps/agent (FastAPI + LangGraph + LangChain + Eve + Missions) 🔄 active in current worktree
+### Gate F — apps/agent (FastAPI + LangGraph + LangChain + Eve + Missions) ✅ (`1cab7bf`)
 - Python 3.13 via `uv python install 3.13`. Layout per spec §7: `apps/agent/shoppingpal/{api,graph,nodes,domain,retrieval,ranking,tools,policies,observability}`, pyproject.toml, uv.lock.
 - Deps: fastapi, uvicorn[standard], langgraph, langchain, langchain-openai (or anthropic/google optional), pydantic v2, asyncpg, ruff, pyright, pytest, httpx.
 - API versioned `/api/v1/*`, Pydantic boundaries, OpenAPI, generate TS client into `packages/contracts/agent-api.ts` (hand-maintained acceptable if documented).
@@ -134,7 +136,7 @@ pnpm exec medusa start      # :9000, admin disabled
 - **Eve**: no external Eve service exists — implement Eve IN-REPO as the conversational runtime module of apps/agent (`eve/`): sessions, SSE streaming envelope, approval interactions, model routing; it invokes ShoppingGraph through the typed boundary. Document this decision in docs/ARCHITECTURE.md. Remove AI SDK ToolLoopAgent outer loop from web once Eve parity proven (keep generative UI components; they consume the SAME typed payloads — adapt `app/api/chat/route.ts` to proxy Eve SSE when `AGENT_URL` set, else fall back to existing demo-agent (degraded contract preserved)).
 - Shopping Missions: own tables in agent-domain Postgres (schema `agent`), fields per spec §18/N. Persist independent of chat/checkpoints. API endpoints + typed payloads (`ShoppingMissionSummary/Update`).
 - Commerce mutations from agent: NOT direct Medusa writes from Python without policy — preferred topology: agent returns `CartProposal`; web executes via existing server actions (keeps actor/authz server-side). Document choice; alternatively signed internal endpoint. Idempotency keys (§24/T) mandatory either way.
-- Gates: `uv sync --frozen`, `uv run ruff check .`, `uv run pyright`, `uv run pytest`.
+- Qualification: `uv sync --frozen`, `uv run ruff check .`, `uv run pyright`, and `uv run pytest -q` passed with the Postgres-backed runtime. The graph, Eve bridge, missions, canonical CartProposal path, safety boundary, idempotency replay, and degraded responses are committed in `1cab7bf`.
 
 ### Safety/idempotency/observability (spec §20/23/24/25)
 - operation_id = sha256(actor_id|graph_run_id|action_type|canonical_target|revision); replay tests.
@@ -142,8 +144,8 @@ pnpm exec medusa start      # :9000, admin disabled
 - Prompt-injection: treat retrieved/catalog text as untrusted; tool authority only from code; test injection strings cannot trigger mutations.
 - correlation_id/actor_id/eve_session_id/mission_id/graph_run_id/commerce_operation_id propagated; structured logs; OTel exporter optional-by-env; LangSmith via env vars.
 
-### Legacy removal (spec §27/W) — only after parity
-Delete: Drizzle commerce tables/provider, custom CheckoutService order/payment authority, Better Auth, ToolLoopAgent outer runtime, PGlite commerce runtime, obsolete drizzle/ migrations folder. Keep static catalog ONLY if needed for zero-infra degraded browsing (document; commerce actions must degrade clearly, never simulate success — spec §26).
+### Legacy removal (spec §27/W) ✅ (`2545368`)
+Removed after Gate D/E/F parity: the web Drizzle cart/catalog/order authorities, custom CheckoutService and local Stripe/demo payment path, obsolete Drizzle migrations/seeds, and the old web commerce schema. Better Auth and the production ToolLoopAgent branch were removed in Gate D/F. PGlite remains only for saved products and conversation/message persistence; the static catalog remains browse-only when Medusa is absent. Commerce mutations and checkout fail explicitly and never simulate success.
 
 ### Full E2E + clean clone + docs + secret audit + FINAL RECEIPT (spec §30/31/Z/AC/AD)
 - Required E2E matrix incl. safety + degraded modes.
@@ -154,20 +156,26 @@ Delete: Drizzle commerce tables/provider, custom CheckoutService order/payment a
 
 ---
 
-## 5. CURRENT STATE AFTER GATE E / ACTIVE GATE F
+## 5. CURRENT STATE AFTER LEGACY REMOVAL
 
-Gate D is qualified in `c908290`; Gate E is qualified in `a4fe955`. The current Gate F implementation is intentionally uncommitted until this handoff's final static, browser, safety, and secret checks are complete.
+Gate D is qualified in `c908290`; Gate E is qualified in `a4fe955`; Gate F is qualified and committed in `1cab7bf`; duplicate web commerce authorities are removed and committed in `2545368`. Final E2E, clean-clone, service, and receipt evidence is appended after the final qualification run.
 
-Implemented in the current Gate F worktree:
+Implemented in the committed Gate F/legacy-removal state:
 - `apps/agent` is a Python 3.13 FastAPI service with Pydantic v2, LangGraph, LangChain structured runnable boundaries, in-repo Eve sessions/SSE, Postgres checkpoints, actor-scoped Shopping Missions, deterministic ranking, canonical Medusa retrieval, approval policy, prompt-injection boundary, stable operation IDs, and degraded responses.
 - The agent returns `CartProposal`; the web server verifies canonical price and variant, sends the operation ID as Medusa's idempotency key, executes the existing server-side cart provider, and emits a cart UI part only after the returned cart is acknowledged.
 - The web route proxies Eve into the existing recommendation, comparison, bundle, and cart components. The former AI SDK `ToolLoopAgent` production branch is removed; the no-agent deterministic demo is retained only for explicit degraded local operation.
 - Regression coverage includes a known working Tidepool product, the historically failing Marlowe product, invalid and sold-out products, ordinal shortlist mutation, bundle budget handling, catalog prompt injection, mission independence, typed UI adaptation, and checkout degradation.
+- The web has no local cart, order, payment, or commerce catalog authority. `apps/web/lib/db` and PGlite are limited to saved products and conversation/message persistence; absent Medusa configuration is browse-only.
 
 Executed Gate F evidence before commit:
 - `uv sync --frozen` PASS; `uv run ruff check .` PASS; `uv run pyright` PASS; `uv run pytest -q` PASS (12 tests with Postgres; 7 plus 2 skips without DB).
 - `pnpm lint` PASS; `pnpm typecheck` PASS; `pnpm --filter @shoppingpal/web test` PASS (72 tests); fresh production `pnpm --filter @shoppingpal/web build` PASS.
 - Fresh Medusa-mode production Playwright: 8 tests, 4 executed and 4 viewport-skipped, 0 failed. The executed flows covered auth, catalog/PDP/cart, recommendation, comparison, agent cart mutation/badge/cart read, bundle, checkout degradation, and mobile assistant mutation.
 - Live agent health reported `checkpoint_backend=postgres`; live recommendation, bundle, canonical cart proposal, invalid-product rejection, mission roundtrip, and replay-stable operation ID were verified against Medusa.
+
+Post-parity removal evidence:
+- `2545368` deletes the duplicate web commerce providers, local checkout/order implementation, Better Auth-era schema tables, legacy seeds/migrations, and Stripe web dependency.
+- `pnpm --filter @shoppingpal/web test` passed with 72 tests, including non-commerce state migration and canonical Medusa cart regressions. The no-env E2E contract is browse/degraded-only: commerce-heavy suites skip without Medusa, while catalog browsing remains available.
+- The checkout API and server action return the same explicit Medusa payment-setup limitation; no local order or payment record is created.
 
 Servers are stopped after qualification. Medusa :9000 and the Docker trio remain the documented local prerequisites; Typesense is reachable on :8108 but remains Docker-healthcheck-unhealthy because its image lacks the configured `wget` probe.

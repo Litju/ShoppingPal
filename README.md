@@ -2,6 +2,8 @@
 
 ShoppingPal is a conventional commerce storefront with an optional typed shopping-agent path. Medusa is the commerce authority; Typesense is discovery-only; the FastAPI agent proposes actions and the web server performs and acknowledges cart mutations against canonical state.
 
+The web fallback is deliberately limited: without Medusa it can browse the static catalog and retain saved/chat state, but it cannot create a cart, order, payment, or simulated checkout success.
+
 ## Local topology
 
 | Service | Address |

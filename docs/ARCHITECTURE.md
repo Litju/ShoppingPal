@@ -6,6 +6,7 @@
 - Typesense is a discovery projection. Search candidate IDs are rehydrated from Medusa before ranking or commerce decisions.
 - `apps/agent` owns the typed shopping workflow, Eve session envelope, approval policy, canonical revalidation, and independent Shopping Mission state. Python does not mutate Medusa directly.
 - The web server owns actor-scoped cookies, server actions, and execution of `CartProposal` messages. It emits the UI only after the canonical cart mutation returns.
+- The web database/PGlite runtime stores saved products and conversation messages only; it does not own products, carts, orders, payments, or inventory.
 
 ## Runtime flow
 
@@ -23,4 +24,4 @@ Eve is an in-repository runtime in `apps/agent/shoppingpal/eve`; it is not a sec
 
 ## Degraded operation
 
-The storefront remains usable when the agent is absent. With no agent URL and no model credentials, the deterministic demo agent preserves the existing generative UI for local demonstration. A configured model without `AGENT_URL` returns an explicit unavailable response rather than silently reactivating a second production authority. Medusa checkout remains an explicit degraded boundary until a payment provider is configured.
+The storefront remains usable when the agent is absent. With no agent URL and no model credentials, the deterministic demo agent preserves the existing generative UI for local demonstration. A configured model without `AGENT_URL` returns an explicit unavailable response rather than silently reactivating a second production authority. When Medusa is absent, catalog browsing is static and browse-only; cart mutations fail explicitly. Medusa checkout remains an explicit degraded boundary until a payment provider is configured.

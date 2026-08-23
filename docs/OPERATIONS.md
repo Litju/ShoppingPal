@@ -8,6 +8,8 @@
 4. Start the agent on `:8200` with `AGENT_DATABASE_URL`, `AGENT_CHECKPOINT_BACKEND=postgres`, the Medusa URL/key/region, and an internal token.
 5. Stop any existing web process, rebuild, then start the production web server on `:3100` before Playwright.
 
+With Medusa variables absent, the web app is intentionally browse-only: cart and checkout actions report degraded availability. Do not treat that mode as a commerce qualification run.
+
 ## Checks
 
 ```powershell
