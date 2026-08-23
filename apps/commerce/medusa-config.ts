@@ -2,6 +2,15 @@ import { defineConfig, loadEnv } from "@medusajs/framework/utils";
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd());
 
+function secret(name: string, developmentFallback: string): string {
+  const value = process.env[name]?.trim();
+  if (value) return value;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`${name} must be configured in production.`);
+  }
+  return developmentFallback;
+}
+
 export default defineConfig({
   admin: {
     // Backend-only commerce service; the storefront is apps/web and there
@@ -15,8 +24,8 @@ export default defineConfig({
       storeCors: process.env.STORE_CORS ?? "http://localhost:3000",
       adminCors: process.env.ADMIN_CORS ?? "http://localhost:7001",
       authCors: process.env.AUTH_CORS ?? "http://localhost:3000,http://localhost:9000",
-      jwtSecret: process.env.JWT_SECRET ?? "shoppingpal-dev-jwt-secret-not-for-production",
-      cookieSecret: process.env.COOKIE_SECRET ?? "shoppingpal-dev-cookie-secret-not-for-production",
+      jwtSecret: secret("JWT_SECRET", "shoppingpal-dev-jwt-secret-not-for-production"),
+      cookieSecret: secret("COOKIE_SECRET", "shoppingpal-dev-cookie-secret-not-for-production"),
     },
   },
   modules: [

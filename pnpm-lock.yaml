@@ -41,6 +41,9 @@ importers:
       '@medusajs/medusa':
         specifier: ^2.19.0
         version: 2.19.0(cuq75r6br7a4ksdv7en2hufyeu)
+      '@medusajs/payment-stripe':
+        specifier: ^2.19.0
+        version: 2.19.0(@medusajs/framework@2.19.0(@medusajs/cli@2.19.0(@types/node@26.2.0))(@types/node@26.2.0)(ioredis@5.11.1)(vite@7.3.6(@types/node@26.2.0)(jiti@1.21.7)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.0))(zod@4.2.0))
       '@shoppingpal/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts

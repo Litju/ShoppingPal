@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 import * as schema from "@/db/schema";
 import type { Database } from "@/lib/db";
@@ -33,10 +33,10 @@ export async function upsertConversation(params: {
   conversationId: string;
   userId: string;
   title?: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const db = await getDb();
-  if (!db) return;
-  await db
+  if (!db) return false;
+  const rows = await db
     .insert(schema.conversations)
     .values({
       id: params.conversationId,
@@ -51,17 +51,33 @@ export async function upsertConversation(params: {
           ? { title: params.title }
           : {}),
       },
-    });
+      where: eq(schema.conversations.userId, params.userId),
+    })
+    .returning({ id: schema.conversations.id });
+  return rows.length > 0;
 }
 
 export async function appendMessage(params: {
   conversationId: string;
+  userId: string;
   role: "user" | "assistant";
   parts: unknown[];
-}): Promise<void> {
+}): Promise<boolean> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return false;
   try {
+    const ownedConversation = await db
+      .select({ id: schema.conversations.id })
+      .from(schema.conversations)
+      .where(
+        and(
+          eq(schema.conversations.id, params.conversationId),
+          eq(schema.conversations.userId, params.userId),
+        ),
+      )
+      .limit(1);
+    if (!ownedConversation[0]) return false;
+
     await db.insert(schema.messages).values({
       conversationId: params.conversationId,
       role: params.role,
@@ -71,9 +87,16 @@ export async function appendMessage(params: {
     await db
       .update(schema.conversations)
       .set({ updatedAt: new Date() })
-      .where(eq(schema.conversations.id, params.conversationId));
+      .where(
+        and(
+          eq(schema.conversations.id, params.conversationId),
+          eq(schema.conversations.userId, params.userId),
+        ),
+      );
+    return true;
   } catch (error) {
     console.error("[chat-persist] failed:", error);
+    return false;
   }
 }
 
@@ -102,7 +125,10 @@ export async function getConversationMessages(
     .select({ id: schema.conversations.id })
     .from(schema.conversations)
     .where(
-      eq(schema.conversations.id, conversationId),
+      and(
+        eq(schema.conversations.id, conversationId),
+        eq(schema.conversations.userId, userId),
+      ),
     )
     .limit(1);
   if (!convo[0]) return [];

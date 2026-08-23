@@ -27,7 +27,7 @@ export default async function OrdersPage() {
     <div className="mx-auto max-w-3xl px-4 py-10 lg:px-6">
       <h1 className="text-2xl font-bold tracking-tight">Your orders</h1>
       <p className="mt-4 rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-        Medusa order history will appear here after canonical checkout is enabled.
+        Order history will appear here after checkout is enabled.
       </p>
     </div>
   );

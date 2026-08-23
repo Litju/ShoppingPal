@@ -116,7 +116,7 @@ export function CartButton() {
             Checkout
           </Button>
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
-            Free shipping over $75 Â· Secure checkout via Stripe
+            Free shipping over $75 · Payment provider required to complete checkout
           </p>
         </div>
       </SheetContent>

@@ -62,3 +62,10 @@ def test_api_graph_and_eve_return_typed_results() -> None:
         )
         assert stream.status_code == 200
         assert "event: graph_result" in stream.text
+
+
+def test_api_rejects_missing_boundary_configuration() -> None:
+    settings = AgentSettings(host="127.0.0.1")
+    with TestClient(create_app(settings, catalog=FakeCatalog([product()]))) as app:
+        response = app.get("/api/v1/missions")
+    assert response.status_code == 503

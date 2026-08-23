@@ -25,7 +25,7 @@ const uiMessageSchema = z.object({
 });
 
 const chatRequestSchema = z.object({
-  conversationId: z.string().max(80).optional(),
+  conversationId: z.string().uuid().optional(),
   messages: z.array(uiMessageSchema).min(1),
 });
 
@@ -64,16 +64,19 @@ export async function POST(request: Request) {
 
   // Persist the user turn for signed-in users with a database.
   if (user && body.conversationId) {
-    await upsertConversation({
+    const ownsConversation = await upsertConversation({
       conversationId: body.conversationId,
       userId: user.id,
       title: deriveTitle(userText),
     });
-    await appendMessage({
-      conversationId: body.conversationId,
-      role: "user",
-      parts: lastUser?.parts ?? [],
-    });
+    if (ownsConversation) {
+      await appendMessage({
+        conversationId: body.conversationId,
+        userId: user.id,
+        role: "user",
+        parts: lastUser?.parts ?? [],
+      });
+    }
   }
 
   const agentConfig = getAgentConfig();
@@ -123,7 +126,12 @@ export async function POST(request: Request) {
         onError: () => "The shopping workflow is unavailable right now. The store still works normally.",
       });
       if (user && body.conversationId) {
-        await appendMessage({ conversationId: body.conversationId, role: "assistant", parts: [] });
+        await appendMessage({
+          conversationId: body.conversationId,
+          userId: user.id,
+          role: "assistant",
+          parts: [],
+        });
       }
       return createUIMessageStreamResponse({ stream });
     } catch (error) {
@@ -149,6 +157,7 @@ export async function POST(request: Request) {
           // Persist a compact assistant record (demo path builds parts inline).
           await appendMessage({
             conversationId: body.conversationId,
+            userId: user.id,
             role: "assistant",
             parts: [],
           });

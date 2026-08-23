@@ -19,7 +19,7 @@ import type { CartRef } from "@/lib/cart/types";
  *   {kind:"guest", token}  → token stores the anonymous Medusa cart id.
  *   {kind:"user", userId}  → per-user cart id is kept in a server cookie;
  *                            the cart is attached to the customer during
- *                            auth cutover (Gate D).
+ *                            sign-in.
  */
 
 interface MedusaCartLineItem {
@@ -121,7 +121,7 @@ export class MedusaCartProvider {
     if (ref.kind === "guest") {
       return ref.token.startsWith("cart_") ? ref.token : null;
     }
-    return null; // user carts are resolved by the session layer in Gate D
+    return null; // user carts are resolved by the session layer
   }
 
   async getOrCreateCartId(ref: CartRef): Promise<string> {
@@ -257,9 +257,9 @@ export class MedusaCartProvider {
   }
 
   /**
-   * Legacy-compatible merge entry point. In Medusa mode the guest token IS
+   * Guest cart merge entry point. In Medusa mode the guest token is
    * the anonymous cart id; the cart survives sign-in and is attached to
-   * the authenticated customer via attachCustomer during auth cutover.
+   * the authenticated customer via attachCustomer during sign-in.
    */
   async mergeGuestCart(guestToken: string, userId: string): Promise<CartDTO> {
     void userId;

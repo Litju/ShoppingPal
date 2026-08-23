@@ -34,7 +34,7 @@ export function SignUpForm() {
       router.push("/account");
       router.refresh();
     } catch {
-      setError("Accounts need a database (DATABASE_URL). The store works fine without one.");
+      setError("Accounts are unavailable right now. The store still works without an account.");
     } finally {
       setBusy(false);
     }

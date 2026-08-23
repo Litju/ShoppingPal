@@ -114,7 +114,7 @@ test.describe("Shopping Pal desktop flows", () => {
       .fill("prepare checkout");
     await page.locator("#pal-composer").press("Enter");
     await expect(
-      page.getByText("Checkout isn't available right now. Medusa payment setup is required.", {
+      page.getByText("Checkout isn't available right now; payment setup is required.", {
         exact: true,
       }).first(),
     ).toBeVisible({ timeout: 30_000 });

@@ -10,6 +10,6 @@ export async function startCheckoutAction(): Promise<
 > {
   return {
     ok: false,
-    error: "Checkout isn't available right now. Medusa payment setup is required.",
+    error: "Checkout isn't available right now; payment setup is required.",
   };
 }

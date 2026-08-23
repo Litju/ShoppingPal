@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hmac import compare_digest
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -42,8 +43,14 @@ def _context(
 ) -> RequestContext:
     runtime = _runtime(request)
     expected = runtime.settings.internal_token
-    if expected and x_agent_internal_token != expected:
-        raise HTTPException(status_code=401, detail="agent internal authentication required")
+    if expected:
+        if not x_agent_internal_token or not compare_digest(x_agent_internal_token, expected):
+            raise HTTPException(status_code=401, detail="agent internal authentication required")
+    elif not (
+        runtime.settings.allow_unauthenticated_local
+        and runtime.settings.host in {"127.0.0.1", "localhost", "::1"}
+    ):
+        raise HTTPException(status_code=503, detail="agent internal authentication is not configured")
     return RequestContext(
         actor_id=x_actor_id or "guest",
         correlation_id=x_correlation_id or f"corr_{uuid4().hex}",

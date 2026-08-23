@@ -1,27 +1,51 @@
 # ShoppingPal architecture
 
-## Authorities
-
-- Medusa owns products, variants, prices, inventory, carts, customers, and checkout state.
-- Typesense is a discovery projection. Search candidate IDs are rehydrated from Medusa before ranking or commerce decisions.
-- `apps/agent` owns the typed shopping workflow, Eve session envelope, approval policy, canonical revalidation, and independent Shopping Mission state. Python does not mutate Medusa directly.
-- The web server owns actor-scoped cookies, server actions, and execution of `CartProposal` messages. It emits the UI only after the canonical cart mutation returns.
-- The web database/PGlite runtime stores saved products and conversation messages only; it does not own products, carts, orders, payments, or inventory.
-
-## Runtime flow
+## Runtime topology
 
 ```text
-Eve /api/v1
-  -> ShoppingGraph (LangGraph)
-  -> Medusa catalog hydration
-  -> deterministic constraints and ranking
-  -> CartProposal with operation_id
-  -> web canonical revalidation + Medusa cart mutation
-  -> typed tool part + cart refresh
+Browser
+   |
+   v
+Next.js storefront + Eve session boundary
+   |
+   v
+FastAPI service
+   |
+   v
+LangGraph ShoppingGraph
+   |---- Typesense discovery projection
+   |---- Medusa canonical commerce
+   |---- Shopping Mission persistence
+
+Medusa
+   |---- PostgreSQL
+   |---- Redis
+   |---- Stripe payment provider (optional)
 ```
 
-Eve is an in-repository runtime in `apps/agent/shoppingpal/eve`; it is not a second agent framework. LangChain supplies the structured runnable boundary, LangGraph owns the explicit workflow, and FastAPI/Pydantic own the service boundary.
+Eve is the in-repository conversational runtime in `apps/agent/shoppingpal/eve`. It owns session envelopes, streaming events, approvals, and the typed handoff into `ShoppingGraph`. LangGraph owns the explicit workflow; LangChain Core supplies the structured runnable boundary; FastAPI and Pydantic define the service contract.
+
+## Authority boundaries
+
+- Medusa owns products, variants, prices, inventory, customers, carts, checkout, payments, and orders.
+- Typesense is a discovery projection. Search candidates are rehydrated from Medusa before ranking or commerce decisions.
+- The agent service owns workflow state, approval policy, canonical revalidation, and Shopping Mission state. It does not mutate Medusa directly.
+- The web server derives actor-scoped cookies and executes `CartProposal` messages through the canonical Medusa cart provider.
+- The web database creates only saved-item and conversation state; startup never drops commerce or authentication tables.
+- The web database/PGlite runtime stores saved products and conversation messages only. It does not own commerce records.
+
+## Mutation protocol
+
+1. The workflow searches discovery data and hydrates candidates from Medusa.
+2. The workflow rechecks the canonical variant, price, and inventory before creating a `CartProposal`.
+3. The proposal includes a stable operation id derived from actor, graph run, action, target, and canonical revision.
+4. The web server verifies the proposal against current Medusa state and sends the operation id as the commerce idempotency key.
+5. The UI renders a cart action only after Medusa returns the canonical cart acknowledgement.
+
+Catalog and user-provided text are untrusted data. They can inform a recommendation but cannot authorize a tool or commerce mutation.
 
 ## Degraded operation
 
-The storefront remains usable when the agent is absent. With no agent URL and no model credentials, the deterministic demo agent preserves the existing generative UI for local demonstration. A configured model without `AGENT_URL` returns an explicit unavailable response rather than silently reactivating a second production authority. When Medusa is absent, catalog browsing is static and browse-only; cart mutations fail explicitly. Medusa checkout remains an explicit degraded boundary until a payment provider is configured.
+The storefront remains usable when the agent is absent. With no agent URL and no model credentials, the web fallback provides deterministic shopping responses for local demonstration. A configured model without the agent service returns an explicit unavailable response rather than activating a second production authority.
+
+When Medusa is absent, the static catalog is browse-only and cart mutations fail explicitly. Checkout remains unavailable until a Medusa payment provider is configured; no local order or simulated payment is created.

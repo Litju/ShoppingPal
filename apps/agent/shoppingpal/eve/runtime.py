@@ -20,6 +20,9 @@ class EveSession:
 class EveRuntime:
     """Eve is the session/streaming envelope; ShoppingGraph owns workflow state."""
 
+    MAX_SESSIONS = 1000
+    MAX_MESSAGES_PER_SESSION = 30
+
     def __init__(self, graph: ShoppingGraph) -> None:
         self.graph = graph
         self.sessions: dict[tuple[str, str], EveSession] = {}
@@ -30,7 +33,11 @@ class EveRuntime:
         if session is None:
             session = EveSession(session_id=session_id, actor_id=actor_id)
             self.sessions[key] = session
+            if len(self.sessions) > self.MAX_SESSIONS:
+                self.sessions.pop(next(iter(self.sessions)))
             return session, True
+        self.sessions.pop(key)
+        self.sessions[key] = session
         return session, False
 
     async def handle(self, actor_id: str, request: GraphRequest, correlation_id: str) -> list[EveEnvelope]:
@@ -44,6 +51,7 @@ class EveRuntime:
         )
         set_trace_context(context)
         session.messages.append(request.message)
+        del session.messages[:-self.MAX_MESSAGES_PER_SESSION]
         if session.last_product_ids:
             request = request.model_copy(update={"context_product_ids": session.last_product_ids})
         response = await self.graph.run(request, actor_id=actor_id, correlation_id=context.correlation_id)

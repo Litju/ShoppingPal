@@ -103,7 +103,7 @@ export default async function ProductPage({
             <SaveButton productId={product.id} title={product.title} variant="outline" className="h-11 w-11" />
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Free shipping over $75 · 30-day returns · Secure Stripe checkout
+            Free shipping over $75 · 30-day returns · Payment provider checkout
           </p>
 
           <div className="mt-6 border-t border-border pt-6">

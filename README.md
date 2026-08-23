@@ -4,57 +4,48 @@
   <img src="docs/assets/readme/app-home.png" alt="ShoppingPal home screen with the shopping companion prompt and featured catalog" width="100%" />
 </p>
 
-<p align="center"><strong>An e-commerce web app powered by ShoppingPal: an agent companion from product search to a canonical cart.</strong></p>
+<p align="center"><strong>An agent-assisted commerce platform for discovering, comparing, and purchasing products.</strong></p>
 
-ShoppingPal combines a calm storefront with an agent companion for the shopping journey. It helps narrow a messy request into useful options, compare tradeoffs, and propose a cart action without letting a language model invent prices, stock, variants, or order state.
+ShoppingPal pairs a conventional storefront with a typed shopping assistant. The assistant can narrow a request, compare grounded product options, and propose cart actions, while Medusa remains the authority for products, variants, prices, inventory, customers, carts, checkout, and orders.
 
-The authority split is deliberate:
+The system is designed around explicit boundaries:
 
 ```text
-Eve /api/v1
-        |
-LangGraph ShoppingGraph
-        |
-Typesense discovery -> Medusa hydration -> CartProposal
-        |
-web actor scope + price/variant/inventory revalidation
-        |
-Medusa idempotent cart mutation -> canonical ACK -> UI
+Browser
+  -> Next.js storefront
+  -> Eve session runtime / FastAPI
+  -> LangGraph ShoppingGraph
+       -> Typesense discovery
+       -> Medusa canonical commerce
+       -> Shopping Mission persistence
 ```
 
-Medusa owns products, variants, prices, inventory, carts, customers, and checkout state. Typesense is discovery-only. Eve owns sessions, streaming, approvals, and the handoff into the explicit ShoppingGraph. The web server derives the scoped `ActorContext`, verifies the graph's `CartProposal` against current Medusa state, performs the mutation, and renders only the returned cart acknowledgement. The storefront remains usable in a keyless degraded mode with deterministic shopping behavior; an external model is optional and never becomes commerce truth.
+The web server derives the actor scope, revalidates proposed mutations against current Medusa state, and renders only canonical cart acknowledgements. If the agent is unavailable, the storefront still works. If Medusa is unavailable, browsing is intentionally read-only and checkout reports the limitation instead of simulating a payment.
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/assets/readme/app-catalog.png" alt="ShoppingPal audio catalog screen with filters and product cards" width="100%" /></td>
-    <td width="50%"><img src="docs/assets/readme/app-product.png" alt="ShoppingPal Marlowe product detail screen with price, stock, specs, reviews, and add-to-cart" width="100%" /></td>
-  </tr>
-</table>
+## Demonstrated engineering
 
-## Why it exists
-
-Conversation and commerce need different authorities. ShoppingPal makes that boundary explicit:
-
-- Discovery can be fast and ranked, but every candidate is hydrated against current Medusa state.
-- Prices and inventory are revalidated before mutation.
-- Cart changes return a canonical acknowledgement before the UI commits the result.
-- Stable operation IDs make retries safe and idempotent.
-- Approval gates and actor scoping keep suggestions separate from authorization.
-- If the agent disappears, the conventional storefront still works.
-- Without Medusa, browsing is static and browse-only; cart mutations fail explicitly.
-- Checkout remains degraded until a Medusa payment provider is configured.
+- Next.js and React storefront with responsive product, cart, account, and checkout surfaces
+- Medusa-backed product, variant, inventory, customer, cart, checkout, and order authority
+- Typesense discovery projection with canonical Medusa rehydration
+- Eve conversational runtime and explicit LangGraph shopping workflow
+- FastAPI and Pydantic service boundary with actor scoping and approval boundaries
+- Shopping Missions persisted independently from chat history and graph checkpoints
+- Structured generative commerce UI backed by typed payloads
+- Idempotent commerce mutations with price and inventory revalidation
+- Prompt-injection boundaries for untrusted catalog content
+- Deterministic degraded operation when external model credentials are absent
+- Production-style unit, service, browser, and clean-clone qualification
 
 ## Stack
 
 | Layer | Technologies | Responsibility |
 | --- | --- | --- |
-| Web storefront | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Radix UI | Product browsing, PDPs, cart UI, and generative commerce UI |
+| Storefront | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Radix UI | Product browsing, PDPs, cart UI, accounts, and assistant UI |
 | Commerce | Medusa 2.19, PostgreSQL 16, Redis 7, Docker Compose | Canonical commerce state and mutations |
-| Search | Typesense 27.1 | Search and discovery projection only |
-| Agent API | Python 3.13, FastAPI, Pydantic v2, Uvicorn | Conversation, sessions, streaming, approvals, and the agent boundary |
-| Agent workflow | Eve, LangGraph, LangChain Core | Session runtime, explicit ShoppingGraph workflow, and model/tool/structured-output primitives |
-| Shopping Missions | PostgreSQL-backed durable domain state | Shopping objectives independent of chat history and checkpoints |
-| Quality and tooling | pnpm 11, Turborepo, Vitest, Playwright, Ruff, Pyright, Pytest | Workspace orchestration, static checks, unit tests, browser tests, and Python validation |
+| Search | Typesense 27.1 | Discovery projection only |
+| Agent service | Python 3.13, FastAPI, Pydantic 2, Uvicorn | Conversation, streaming, approvals, and service boundary |
+| Agent workflow | Eve, LangGraph, LangChain Core | Session runtime, explicit shopping workflow, and typed runnable boundary |
+| Quality | pnpm, Turborepo, Vitest, Playwright, Ruff, Pyright, Pytest | Workspace orchestration and qualification |
 
 ## Local topology
 
@@ -68,20 +59,28 @@ Conversation and commerce need different authorities. ShoppingPal makes that bou
 | Docker PostgreSQL | `localhost:5433` |
 | Agent | `http://localhost:8200` |
 
-The native PostgreSQL service owns `:5432`; use the Docker database on `:5433` for Medusa and the agent.
-
 ## Run it
 
-Read [HANDOFF.md](HANDOFF.md) and [docs/OPERATIONS.md](docs/OPERATIONS.md) before starting services. The handoff is the execution-state authority and includes the Windows encoding, port, rebuild, and stale-server rules.
+Read [docs/OPERATIONS.md](docs/OPERATIONS.md) for service order and Windows-specific checks. The root [.env.example](.env.example) is a configuration reference; service-specific examples live in `apps/agent/.env.example` and `apps/commerce/.env.example`.
 
-For a storefront-only development session:
+Install the pinned workspace dependencies:
 
 ```powershell
-pnpm install
+pnpm install --frozen-lockfile
+```
+
+For a storefront-only session, leave `MEDUSA_BACKEND_URL` and `AGENT_URL` unset and start the web app:
+
+```powershell
 pnpm --filter @shoppingpal/web dev
 ```
 
-For the canonical Medusa path, start the dependencies and seed Medusa first:
+This mode supports catalog browsing and a deterministic local assistant experience. Commerce actions remain clearly unavailable without Medusa.
+
+For the full local topology, use the following terminals in order. The search
+projection must run after Medusa is listening:
+
+Terminal 1 — bootstrap and start Medusa:
 
 ```powershell
 docker compose -f infra/docker-compose.yml up -d
@@ -89,19 +88,49 @@ docker compose -f infra/docker-compose.yml up -d
 $env:DATABASE_URL = "postgres://shoppingpal:shoppingpal@localhost:5433/shoppingpal"
 pnpm --dir apps/commerce exec medusa db:migrate
 pnpm --dir apps/commerce run db:seed
-pnpm --dir apps/commerce run search:sync
+$env:MEDUSA_BACKEND_URL = "http://localhost:9000"
+pnpm --dir apps/commerce exec medusa exec ./src/scripts/ensure-publishable-key.ts
+# Copy the publishable key printed above and set the seeded region id.
+$env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
+$env:MEDUSA_REGION_ID = "<local-region-id>"
 pnpm --dir apps/commerce exec medusa start
 ```
 
-In a second terminal, start the agent with the documented `MEDUSA_*` and `AGENT_*` variables:
+Terminal 2 — sync Typesense from the live Medusa service:
+
+```powershell
+$env:MEDUSA_BACKEND_URL = "http://localhost:9000"
+$env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
+$env:MEDUSA_REGION_ID = "<local-region-id>"
+pnpm --dir apps/commerce run search:sync
+```
+
+Terminal 3 — configure and start the agent. Use the seeded Medusa publishable key and region id from the local service:
 
 ```powershell
 cd apps/agent
 uv sync --frozen
+$env:AGENT_DATABASE_URL = "postgresql://shoppingpal:shoppingpal@localhost:5433/shoppingpal"
+$env:AGENT_CHECKPOINT_BACKEND = "postgres"
+$env:AGENT_INTERNAL_TOKEN = "local-shoppingpal-agent-token"
+$env:MEDUSA_BACKEND_URL = "http://localhost:9000"
+$env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
+$env:MEDUSA_REGION_ID = "<local-region-id>"
 uv run uvicorn main:app --host 127.0.0.1 --port 8200
 ```
 
-Set `AGENT_URL=http://localhost:8200` for the web process. The app can run without model credentials; the deterministic Eve/ShoppingGraph path and the web demo fallback are intentional.
+Terminal 4 — start the web app with the same service values:
+
+```powershell
+$env:MEDUSA_BACKEND_URL = "http://localhost:9000"
+$env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
+$env:MEDUSA_REGION_ID = "<local-region-id>"
+$env:AGENT_URL = "http://localhost:8200"
+$env:AGENT_INTERNAL_TOKEN = "local-shoppingpal-agent-token"
+pnpm --filter @shoppingpal/web dev
+```
+
+Replace angle-bracket values with the values created by the local bootstrap. They are placeholders, not credentials to commit.
 
 ## Qualification
 
@@ -124,12 +153,16 @@ uv run pyright
 uv run pytest
 ```
 
-The complete executed evidence, gate SHAs, known limitations, and final receipt live in [HANDOFF.md](HANDOFF.md).
+The complete qualification receipt, service limitations, and clean-clone notes are kept in [HANDOFF.md](HANDOFF.md). The final architecture and authority boundaries are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Checkout and demo boundaries
+
+Stripe is an optional Medusa payment provider. Until a payment provider is configured, checkout returns an explicit unavailable response and does not create an order or claim that a payment succeeded. The deterministic assistant path is a local demonstration mode; it never represents an external model or replaces Medusa as commerce authority.
 
 ## Product screenshots
 
-Every image in this README is a real screenshot captured from the local ShoppingPal web app and committed under `docs/assets/readme/`. No stock photography is used.
+The README images are screenshots from the local ShoppingPal storefront and are committed under `docs/assets/readme/`:
 
 - Home: `/`
-- Audio catalog: `/products?category=audio`
-- Marlowe product detail: `/products/marlowe-pulse-anc-headphones`
+- Catalog: `/products?category=audio`
+- Product detail: `/products/marlowe-pulse-anc-headphones`
