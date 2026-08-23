@@ -19,7 +19,7 @@ test.describe("Shopping Pal desktop flows", () => {
     /* 2. Browse a category */
     await page.goto("/products?category=audio");
     await expect(page.getByTestId("products-heading").first()).toHaveText("Audio");
-    const audioCount = await page.getByTestId("results-count").innerText();
+    const audioCount = await page.getByTestId("results-count").first().innerText();
     expect(audioCount).toMatch(/[1-9]/);
 
     /* 3. Search + filter */
@@ -29,7 +29,7 @@ test.describe("Shopping Pal desktop flows", () => {
     await page.getByTestId("max-price-input").fill("250");
     await page.getByTestId("max-price-input").press("Tab");
     await expect(page).toHaveURL(/max=250/, { timeout: 15_000 });
-    await expect(page.getByTestId("results-count")).toContainText("product");
+    await expect(page.getByTestId("results-count").first()).toContainText("product");
 
     /* 4. Open a product */
     await page.locator('[data-testid="product-grid"] a').first().click();
