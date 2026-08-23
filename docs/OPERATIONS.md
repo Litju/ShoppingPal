@@ -1,31 +1,47 @@
-# Operations and qualification
+# Local operations
 
-## Start order
+## Service order
 
-1. Start Docker Desktop and `infra/docker-compose.yml` (Postgres `:5433`, Redis `:6379`, Typesense `:8108`).
-2. Boot Medusa on `:9000`, run migrations, and seed the idempotent catalog.
-3. Sync Typesense from the live Medusa Store API.
-4. Start the agent on `:8200` with `AGENT_DATABASE_URL`, `AGENT_CHECKPOINT_BACKEND=postgres`, the Medusa URL/key/region, and an internal token.
-5. Stop any existing web process, rebuild, then start the production web server on `:3100` before Playwright.
+1. Start Docker Desktop and `infra/docker-compose.yml` (PostgreSQL `:5433`, Redis `:6379`, Typesense `:8108`).
+2. Run Medusa migrations, seed the catalog, and create a publishable key.
+3. Sync the Typesense projection from the live Medusa Store API.
+4. Start the agent on `:8200` with the database, checkpoint, Medusa, and internal-token variables.
+5. Build the web app and start the production server on `:3100` before Playwright.
 
-With Medusa variables absent, the web app is intentionally browse-only: cart and checkout actions report degraded availability. Do not treat that mode as a commerce qualification run.
+Without Medusa variables, the web app is intentionally browse-only. Without an agent URL, the web fallback can demonstrate deterministic assistant responses, but it does not claim external-model reasoning.
 
 ## Checks
 
+Run from the repository root:
+
 ```powershell
+pnpm install --frozen-lockfile
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:e2e
+```
 
-cd apps/agent
+Run from `apps/agent`:
+
+```powershell
 uv sync --frozen
 uv run ruff check .
 uv run pyright
 uv run pytest
 ```
 
-PowerShell 5.1 text rewrites can introduce mojibake or a UTF-8 BOM. Use `apply_patch` or an encoding-controlled writer for source changes. Playwright can reuse a stale `:3100` process; verify and stop the exact listener, rebuild, start, verify the port, and only then run E2E. Remove any temporary `apps/web/.env.local` after qualification.
+The browser suite skips commerce cases when Medusa is not configured. Those skips represent the documented degraded contract, not passing commerce qualification.
 
-Typesense's API health endpoint is green even though its Docker healthcheck is not: the image does not contain the configured `wget` probe. Treat that as an infrastructure healthcheck limitation, not as a catalog-authority failure.
+## Browser qualification hygiene
+
+Playwright can reuse a stale web server when `reuseExistingServer` is enabled. Verify the exact listener on `:3100`, stop it when needed, rebuild the web app, start the production server, and verify the port before running E2E. Remove any local `apps/web/.env.local` after the run.
+
+PowerShell 5.1 can corrupt UTF-8 and add a BOM when rewriting source or JSON files. Use the repository patch workflow or an encoding-controlled writer for changes.
+
+## Infrastructure notes
+
+Typesense's `/health` endpoint is the service check. The local Docker image may report an unhealthy container when its configured probe depends on a binary not included in the image; that probe state does not change Typesense's discovery-authority boundary.
+
+Checkout is intentionally unavailable until the Medusa Stripe payment provider is configured. A failed or unconfigured payment path must remain an explicit error and must not create a local order.

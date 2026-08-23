@@ -14,8 +14,6 @@ class AgentSettings(BaseModel):
     database_url: str = ""
     internal_token: str = ""
     checkpoint_backend: str = "memory"
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4.1-mini"
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
 
@@ -28,8 +26,6 @@ class AgentSettings(BaseModel):
             database_url=os.getenv("AGENT_DATABASE_URL", ""),
             internal_token=os.getenv("AGENT_INTERNAL_TOKEN", ""),
             checkpoint_backend=os.getenv("AGENT_CHECKPOINT_BACKEND", "memory").lower(),
-            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-            openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
             host=os.getenv("AGENT_HOST", "127.0.0.1"),
             port=int(os.getenv("AGENT_PORT", "8000")),
         )
