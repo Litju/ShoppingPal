@@ -15,7 +15,7 @@ import {
  * Ratings are stored in tenths of a star (48 => 4.8). No floats persisted.
  */
 
-/* ── Better Auth compatible entities ─────────────────────────────────────── */
+/* ── Legacy identity entities retained only for migration-era schema compatibility ── */
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),

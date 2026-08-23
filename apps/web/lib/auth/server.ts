@@ -1,101 +1,122 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
+import { cookies } from "next/headers";
 
-import { databaseAvailable, getDatabase } from "@/lib/db";
+import type { ActorContext } from "@shoppingpal/contracts";
+import { getMedusaConfig } from "@/lib/commerce/config";
+import { MedusaClient } from "@/lib/commerce/medusa-client";
 
-/** Minimal structural surface of the Better Auth instance we rely on. */
-export interface PalAuth {
-  api: {
-    getSession(args: { headers: Headers }): Promise<{
-      user: { id: string; name: string; email: string; image?: string | null };
-    } | null>;
+export const MEDUSA_CUSTOMER_COOKIE = "sp_customer";
+
+interface MedusaCustomer {
+  id: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
+export interface MedusaAuthResult {
+  token: string;
+  user: { id: string; name: string; email: string; image: string | null };
+}
+
+function medusaClient(): MedusaClient {
+  const config = getMedusaConfig();
+  if (!config) throw new Error("Medusa authentication is not configured.");
+  return new MedusaClient(config);
+}
+
+function toSessionUser(customer: MedusaCustomer) {
+  return {
+    id: customer.id,
+    email: customer.email,
+    name: [customer.first_name, customer.last_name].filter(Boolean).join(" ") || customer.email,
+    image: null,
   };
-  handler(request: Request): Promise<Response>;
 }
 
-/**
- * Better Auth is enabled whenever a real Postgres database is available.
- * In embedded-demo mode (no DATABASE_URL) the app degrades gracefully:
- * browse/chat/cart still work, account pages explain how to enable auth.
- */
+async function getMedusaUser(token: string) {
+  const result = await medusaClient().get<{ customer: MedusaCustomer }>(
+    "/store/customers/me",
+    { authorization: `Bearer ${token}` },
+  );
+  return toSessionUser(result.customer);
+}
 
-let authPromise: Promise<PalAuth> | null = null;
+/** Server-to-server Medusa emailpass bridge used by the existing auth forms. */
+export async function medusaAuthAction(
+  action: "sign-in/email" | "sign-up/email",
+  input: { name?: string; email: string; password: string },
+): Promise<MedusaAuthResult> {
+  const client = medusaClient();
+  let token: string;
 
-export async function getAuth(): Promise<PalAuth | null> {
-  if (!(await databaseAvailable())) return null;
-  if (!authPromise) {
-    authPromise = (async () => {
-      const { db } = await getDatabase();
-      const googleId = process.env.GOOGLE_CLIENT_ID?.trim();
-      const googleSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const auth: any = betterAuth({
-        secret:
-          process.env.BETTER_AUTH_SECRET?.trim() ||
-          "shopping-pal-demo-secret-not-for-production-use",
-        trustedOrigins: [process.env.BETTER_AUTH_URL ?? "http://localhost:3000"],
-        database: drizzleAdapter(db as never, {
-          provider: "pg",
-          schema: {
-            user: (await import("@/db/schema")).user,
-            session: (await import("@/db/schema")).session,
-            account: (await import("@/db/schema")).account,
-            verification: (await import("@/db/schema")).verification,
-          },
-        }),
-        emailAndPassword: { enabled: true },
-        ...(googleId && googleSecret
-          ? {
-              socialProviders: {
-                google: {
-                  clientId: googleId,
-                  clientSecret: googleSecret,
-                },
-              },
-            }
-          : {}),
-        plugins: [nextCookies()],
-      });
-      return auth as PalAuth;
-    })().catch((error) => {
-      authPromise = null;
-      throw error;
-    });
+  if (action === "sign-up/email") {
+    const registered = await client.post<{ token: string }>(
+      "/auth/customer/emailpass/register",
+      { email: input.email, password: input.password },
+    );
+    const names = (input.name ?? input.email).trim().split(/\s+/);
+    await client.post(
+      "/store/customers",
+      {
+        email: input.email,
+        first_name: names[0],
+        ...(names.slice(1).join(" ") ? { last_name: names.slice(1).join(" ") } : {}),
+      },
+      { authorization: `Bearer ${registered.token}` },
+    );
+    const signedIn = await client.post<{ token: string }>(
+      "/auth/customer/emailpass",
+      { email: input.email, password: input.password },
+    );
+    token = signedIn.token;
+  } else {
+    const signedIn = await client.post<{ token: string }>(
+      "/auth/customer/emailpass",
+      { email: input.email, password: input.password },
+    );
+    token = signedIn.token;
   }
-  return authPromise;
+
+  return { token, user: await getMedusaUser(token) };
 }
 
-/** Current signed-in user (or null). Safe to call in any server context. */
+async function getMedusaSessionUser() {
+  const token = (await cookies()).get(MEDUSA_CUSTOMER_COOKIE)?.value;
+  if (!token) return null;
+  try {
+    return await getMedusaUser(token);
+  } catch {
+    return null;
+  }
+}
+
+/** Current Medusa customer (or null). Safe to call in any server context. */
 export async function getSessionUser(): Promise<{
   id: string;
   name: string;
   email: string;
   image: string | null;
 } | null> {
-  const auth = await getAuth();
-  if (!auth) return null;
-  try {
-    const { headers } = await import("next/headers");
-    const result = await auth.api.getSession({
-      headers: await headers(),
-    });
-    if (!result?.user) return null;
+  return getMedusaSessionUser();
+}
+
+/** Canonical server-derived identity shared by commerce and the agent boundary. */
+export async function getActorContext(): Promise<ActorContext | null> {
+  const user = await getSessionUser();
+  if (user) {
     return {
-      id: result.user.id,
-      name: result.user.name,
-      email: result.user.email,
-      image: result.user.image ?? null,
+      kind: "customer",
+      actorId: user.id,
+      customerId: user.id,
+      principalId: user.id,
     };
-  } catch {
-    return null;
   }
+  const guest = (await cookies()).get("sp_guest")?.value;
+  return guest
+    ? { kind: "guest", actorId: `guest:${guest}`, principalId: `guest:${guest}` }
+    : null;
 }
 
 export function googleOAuthConfigured(): boolean {
-  return Boolean(
-    process.env.GOOGLE_CLIENT_ID?.trim() &&
-      process.env.GOOGLE_CLIENT_SECRET?.trim(),
-  );
+  return false;
 }

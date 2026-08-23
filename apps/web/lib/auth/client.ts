@@ -3,9 +3,9 @@
 import * as React from "react";
 
 /**
- * Lightweight session bindings implemented over Better Auth's REST endpoints.
- * Avoids store-based React hooks so pages can render anywhere (including
- * demo mode where auth responds 503).
+ * Lightweight session bindings over the stable ShoppingPal auth endpoints.
+ * The server route selects Medusa Auth in commerce mode and keeps the demo
+ * fallback contract while the legacy stack is being removed.
  */
 
 export interface SessionUser {
@@ -54,7 +54,7 @@ export function useSessionUser(): SessionState {
   return cachedSession ?? { user: null, pending: true };
 }
 
-/** POST helper against Better Auth endpoints with consistent error shape. */
+/** POST helper against the canonical auth bridge with a consistent error shape. */
 async function authPost<T>(path: string, body: unknown): Promise<{ ok: boolean; data?: T; error?: string }> {
   try {
     const res = await fetch(`/api/auth/${path}`, {
@@ -96,6 +96,6 @@ export async function signInWithGoogle(callbackURL = "/account"): Promise<{ ok: 
     callbackURL,
   });
   if (!result.ok) return result;
-  // When no redirect happened inline, Better Auth returns the target URL.
+  // Providers may return the target URL without redirecting inline.
   return { ok: true, url: result.data?.url };
 }

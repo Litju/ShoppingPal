@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import { getSessionUser } from "@/lib/auth/server";
+import { getSessionUser, MEDUSA_CUSTOMER_COOKIE } from "@/lib/auth/server";
 import {
   DrizzleCartProvider,
   type CartRef,
@@ -69,9 +69,16 @@ export function newGuestToken(): string {
  */
 export async function resolveCartRef(): Promise<CartRef | null> {
   const user = await getSessionUser();
-  if (user) return { kind: "user", userId: user.id };
   const store = await cookies();
   const token = store.get(GUEST_COOKIE)?.value;
+  if (user) {
+    // Medusa keeps the attached cart addressable by its cart id. Retain that
+    // id in the httpOnly cookie so authenticated requests use the same cart.
+    if (medusaEnabled() && token?.startsWith("cart_")) {
+      return { kind: "guest", token };
+    }
+    return { kind: "user", userId: user.id };
+  }
   if (token) return { kind: "guest", token };
   return null;
 }
@@ -80,9 +87,14 @@ export async function resolveCartRef(): Promise<CartRef | null> {
  * Only callable in Server Actions / Route Handlers. */
 export async function ensureCartRef(): Promise<CartRef> {
   const user = await getSessionUser();
-  if (user) return { kind: "user", userId: user.id };
   const store = await cookies();
   let token = store.get(GUEST_COOKIE)?.value;
+
+  if (user && !medusaEnabled()) return { kind: "user", userId: user.id };
+
+  if (user && medusaEnabled() && token?.startsWith("cart_")) {
+    return { kind: "guest", token };
+  }
 
   // In Medusa mode the guest cookie carries the anonymous cart id; legacy
   // mode keeps opaque guest tokens mapped to a local carts row.
@@ -91,6 +103,10 @@ export async function ensureCartRef(): Promise<CartRef> {
       const medusa = await getMedusaCartProvider();
       if (!medusa) throw new Error("Medusa cart provider unavailable");
       token = await medusa.createCart();
+      const customerToken = store.get(MEDUSA_CUSTOMER_COOKIE)?.value;
+      if (user && customerToken) {
+        await medusa.attachCustomer(token, customerToken);
+      }
     } else {
       token = newGuestToken();
     }

@@ -4,11 +4,14 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { getSessionUser } from "@/lib/auth/server";
+import { MEDUSA_CUSTOMER_COOKIE } from "@/lib/auth/server";
 import {
   ensureCartRef,
   getCartProvider,
   resolveCartRef,
 } from "@/lib/cart/session";
+import { MedusaCartProvider } from "@/lib/cart/medusa-cart-provider";
+import { medusaEnabled } from "@/lib/commerce/config";
 import { EMPTY_CART, type CartDTO } from "@shoppingpal/contracts";
 
 export interface ActionResult<T = undefined> {
@@ -102,7 +105,18 @@ export async function mergeGuestCartAction(): Promise<ActionResult<CartDTO>> {
     const store = await cookies();
     const guestToken = store.get("sp_guest")?.value;
     let merged;
-    if (guestToken) {
+    if (
+      medusaEnabled() &&
+      provider instanceof MedusaCartProvider &&
+      guestToken?.startsWith("cart_")
+    ) {
+      const customerToken = store.get(MEDUSA_CUSTOMER_COOKIE)?.value;
+      if (!customerToken) return { ok: false, error: "Could not verify your customer session." };
+      await provider.attachCustomer(guestToken, customerToken);
+      merged = await provider.getCart({ kind: "guest", token: guestToken });
+      // Keep the cart id cookie: Medusa's Store API addresses the attached
+      // cart by id, while the customer JWT remains the identity authority.
+    } else if (guestToken) {
       merged = await provider.mergeGuestCart(guestToken, user.id);
       store.delete("sp_guest");
     } else {

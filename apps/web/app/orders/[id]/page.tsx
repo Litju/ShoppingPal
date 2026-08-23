@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { getCheckoutService } from "@/lib/checkout";
+import { medusaEnabled } from "@/lib/commerce/config";
 import { formatMoney } from "@shoppingpal/contracts";
 
 export const metadata: Metadata = { title: "Order details" };
@@ -14,6 +15,7 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (medusaEnabled()) notFound();
   const checkout = await getCheckoutService();
   if (!checkout) notFound();
   const record = await checkout.getOrder(id);

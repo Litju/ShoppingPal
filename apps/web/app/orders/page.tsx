@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/server";
 import { getCheckoutService } from "@/lib/checkout";
+import { medusaEnabled } from "@/lib/commerce/config";
 import { formatMoney } from "@shoppingpal/contracts";
 
 export const metadata: Metadata = { title: "Your orders" };
@@ -26,7 +27,7 @@ export default async function OrdersPage() {
     );
   }
 
-  const checkout = await getCheckoutService();
+  const checkout = medusaEnabled() ? null : await getCheckoutService();
   const orders = (await checkout?.listOrdersForUser(user.id)) ?? [];
 
   return (
@@ -35,7 +36,9 @@ export default async function OrdersPage() {
 
       {orders.length === 0 ? (
         <p className="mt-4 rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          No orders yet — your future hauls will appear here.
+          {medusaEnabled()
+            ? "Medusa order history will appear here after checkout is enabled."
+            : "No orders yet — your future hauls will appear here."}
         </p>
       ) : (
         <ul role="list" className="mt-6 space-y-3">

@@ -10,7 +10,6 @@ const nextConfig: NextConfig = {
     "@electric-sql/pglite",
     "postgres",
     "@neondatabase/serverless",
-    "better-auth",
   ],
 };
 
