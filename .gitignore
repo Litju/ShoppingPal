@@ -10,6 +10,11 @@ node_modules/
 .next/
 out/
 next-env.d.ts
+**/*.tsbuildinfo
+
+# generated local assistant guidance
+apps/web/AGENTS.md
+apps/web/CLAUDE.md
 
 # local data (embedded demo database)
 .data/
