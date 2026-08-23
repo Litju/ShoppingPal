@@ -12,7 +12,7 @@ Commits so far:
 ee032c2  Shopping Pal: agentic commerce storefront        <- baseline
 19503b0  Gate A: baseline qualification                    <- DONE
 e533b2d  Gate B: monorepo convergence                      <- DONE
-(uncommitted working tree)                                 <- Gate C ~90%
+5dac4c8  Gate C: Medusa commerce cutover                    <- DONE
 ```
 
 ---
@@ -37,9 +37,9 @@ e533b2d  Gate B: monorepo convergence                      <- DONE
 - Single root flat ESLint config (`eslint.config.mjs`); no per-app eslint.
 - Evidence: all gates re-run green in monorepo layout.
 
-### Gate C — Medusa commerce cutover (~90%, uncommitted)
+### Gate C — Medusa commerce cutover ✅ (`5dac4c8`)
 DONE:
-- `infra/docker-compose.yml`: postgres16 (:5433!), redis7 (:6379), typesense27 (:8108). All containers running & healthy.
+- `infra/docker-compose.yml`: postgres16 (:5433!), redis7 (:6379), typesense27 (:8108). Postgres and Redis healthy; Typesense `/health` returns 200, but its image healthcheck is unhealthy because the image does not include the configured `wget` probe.
 - `apps/commerce`: Medusa v2.19 backend (`@medusajs/medusa`, `@medusajs/framework`, `@medusajs/cli`, ts-node devDep, admin dashboard disabled in `medusa-config.ts`).
 - `db:migrate` PASS. Seed script `src/scripts/seed-catalog.ts` is idempotent (external_id = `productIdForSlug(slug)`):
   - 86 products created, each with explicit default variant + USD price + managed inventory
@@ -55,32 +55,24 @@ DONE:
   - `lib/catalog/medusa-provider.ts` — full CatalogProvider impl; **must always pass explicit `fields=` including `metadata` and variant inventory/price fields** (store defaults omit them; missing metadata broke PDPs once already).
   - `lib/cart/medusa-cart-provider.ts` — same surface as DrizzleCartProvider; guest cookie carries the Medusa cart id; `attachCustomer(cartId, token)` ready for Gate D; legacy-compatible `mergeGuestCart`.
   - `lib/cart/session.ts` selects provider by runtime; `ensureCartRef()` creates a Medusa cart and stores its id in the `sp_guest` cookie in medusa mode.
-  - Browser-verified: PDP add-to-cart against live Medusa updates badge ("Open cart, 1 item") for tidepool-sprint-2-earbuds.
+- Browser-verified: PDP add-to-cart against live Medusa updates badge ("Open cart, 1 item") for tidepool-sprint-2-earbuds.
+- Root cause of the non-total variant resolution was confirmed: product detail requests omitted the required `region_id` pricing context, and the variant fallback used Medusa's invalid `variants[]=` query shape. Both failures were swallowed as `undefined` by the adapter. The resolver now passes the configured region on every product lookup, uses `variants.id[]=` for variant lookup, and selects the exact matching variant before falling back to the product default.
+- Regression coverage: `apps/web/tests/unit/medusa-cart-provider.test.ts` covers Tidepool (previously working), Marlowe (previously failing), an invalid product, and an out-of-stock product; invalid and non-purchasable variants never reach the cart mutation.
+- Qualification evidence: fresh `pnpm --filter @shoppingpal/web build` PASS; Medusa-mode `pnpm --filter @shoppingpal/web test:e2e` PASS (3 executed, 3 viewport-skipped); no-env legacy `pnpm --filter @shoppingpal/web test:e2e` PASS (3 executed, 3 viewport-skipped); root `pnpm lint`, `pnpm typecheck`, and `pnpm test` PASS (66 unit tests).
+- Medusa checkout remains explicitly degraded, not falsely successful: native `POST /store/carts/{id}/complete` returned `400 Payment collection has not been initiated for cart` because no payment provider is configured. Medusa-mode checkout reports `Checkout isn't available right now. Medusa payment setup is required.` The legacy demo checkout remains green until its later removal gate.
 
 ---
 
-## 2. ⚠️ ACTIVE BUG — finish this first
+## 2. RESOLVED Gate C defect
 
-**Symptom:** In Medusa mode, add-to-cart fails for SOME products with server log
+**Historical symptom:** In Medusa mode, add-to-cart failed for SOME products with server log
 `[cart] add rejected: Unknown product.` (thrown from `MedusaCartProvider.addItem` when `resolveVariant()` returns undefined).
 
 **Deterministic repro observed:**
 - WORKS: `/products?category=audio` → first item (tidepool-sprint-2-earbuds) → Add → badge=1.
 - FAILS: `/products?q=headphones` → first item (marlowe-pulse-anc-headphones) → Add → badge stays 0.
 
-Both go through identical code paths (`prod_…` id → `/store/products/{id}?fields=…` → variants[0]). Raw Store API shows marlowe has stock=61 and a normal shape. The failing call is the adapter's `resolveVariant` GET for marlowe's id specifically.
-
-**Next steps (fast path):**
-1. Get marlowe's id: `GET /store/products?handle=marlowe-pulse-anc-headphones&limit=1&fields=id,handle,+variants.id`.
-2. `GET /store/products/{id}?fields=id,handle,+variants.id,+variants.manage_inventory,+variants.inventory_quantity` — compare response vs tidepool's. Check `variants` array emptiness/status.
-3. If both look fine, log `resolveVariant` inputs inside `addItem` temporarily (or permanently at debug level) and hit PDP again — inspect whether the passed id is a `prod_` id or something else (e.g., a slug from a cached DTO).
-4. Suspects ranked: (a) some products' store responses omit `variants` unless `+variants.*` fields requested exactly as done — verify header/key mismatch between manual curl (works) and server-side fetch (Node fetch may drop query after `[]` chars if unencoded — note `variants[]=` uses brackets); (b) Next server-side fetch caching a failed response (client uses `cache:"no-store"` — confirm it survived edits).
-
-After fix: rebuild web (`pnpm --filter @shoppingpal/web build`) — E2E uses `next start` on stale `.next` otherwise (burned us twice), kill port 3100 listeners + wipe `apps/web/.data`, then run full suite in BOTH modes:
-- Medusa mode env (below) → expect green.
-- No env (legacy demo) → must remain green until legacy removal gate.
-
-Then commit Gate C.
+Both went through identical storefront paths, but the old adapter collapsed the missing pricing context and malformed variant query into `undefined`. Live Medusa responses showed Marlowe (`prod_01M0NAYVQ6KEV8NG2BSWA3VHHF`, variant `variant_01M0NAYVRAFT0DDECTGCQM3GRD`) and Tidepool (`prod_01M0NAYVWGV0CGAWD0EYYS5EKM`, variant `variant_01M0NAYVXWP90Z00KA17GNN9MZ`) were both published, priced, and in stock. The shared resolver fix and regression suite are recorded above.
 
 ---
 
@@ -159,7 +151,7 @@ Delete: Drizzle commerce tables/provider, custom CheckoutService order/payment a
 
 ---
 
-## 5. UNCOMMITTED STATE RIGHT NOW
-33 changed/new files (Gate C work listed above + cart action logging + mojibake repairs). Working tree otherwise healthy; do not lose it. Suggested first action after fixing §2 bug: `git add -A && git commit` as Gate C.
+## 5. CURRENT STATE AFTER GATE C
+Gate C is committed as `5dac4c8`; the working tree was clean after the qualification commit. The next active gate is Gate D (Medusa Auth).
 
-Servers left running: Medusa :9000 (log `$env:TEMP\medusa-start.log`), web :3100 (log `$env:TEMP\web2-3100.log`), docker trio.
+Servers left running: Medusa :9000 (log `$env:TEMP\medusa-start.log`) and the Docker trio. Web :3100 was stopped after both fresh-build E2E runs. Typesense is reachable on :8108 but remains Docker-healthcheck-unhealthy for the documented missing-`wget` reason.
