@@ -1,4 +1,4 @@
-import type { CategorySlug, Product } from "@/lib/catalog/types";
+import type { CategorySlug, Product } from "./catalog-types";
 
 /**
  * Deterministic, fictional seed catalog for Shopping Pal.

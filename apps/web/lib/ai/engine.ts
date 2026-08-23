@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Product, CategorySlug } from "@/lib/catalog/types";
+import type { Product, CategorySlug } from "@shoppingpal/contracts";
 import { getCatalogProvider } from "@/lib/catalog";
 import { buildBundleFromCandidates, validateExplicitBundle } from "@/lib/catalog/bundle";
 import { computeRecommendation } from "@/lib/ai/explain";
@@ -20,6 +20,7 @@ import {
 import { getCartProvider, ensureCartRef, resolveCartRef } from "@/lib/cart/session";
 import { getSessionUser } from "@/lib/auth/server";
 import { getCheckoutService } from "@/lib/checkout";
+import { medusaEnabled } from "@/lib/commerce/config";
 
 /**
  * Engine functions: the single source of commerce truth for Shopping Pal.
@@ -373,6 +374,12 @@ async function ensureGuestRef(): Promise<{ kind: "guest"; token: string }> {
 export async function runPrepareCheckout(): Promise<
   z.infer<typeof prepareCheckoutOutput>
 > {
+  if (medusaEnabled()) {
+    return {
+      ready: false,
+      message: "Checkout isn't available right now. Medusa payment setup is required.",
+    };
+  }
   const checkout = await getCheckoutService();
   const provider = await getCartProvider();
   if (!checkout || !provider) {

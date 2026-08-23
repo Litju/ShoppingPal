@@ -5,8 +5,8 @@ import { HomePalComposer } from "@/components/chat/home-pal-composer";
 import { ProductCard } from "@/components/commerce/product-card";
 import { RecentlyViewed } from "@/components/commerce/recently-viewed";
 import { getCatalogProvider } from "@/lib/catalog";
-import { COLLECTIONS } from "@/lib/catalog/data/products";
-import { CATEGORY_LABELS } from "@/lib/catalog/types";
+import { COLLECTIONS } from "@shoppingpal/contracts";
+import { CATEGORY_LABELS } from "@shoppingpal/contracts";
 
 export const dynamic = "force-dynamic";
 

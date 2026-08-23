@@ -2,7 +2,7 @@ import type {
   CatalogQuery,
   Product,
   SortOption,
-} from "@/lib/catalog/types";
+} from "@shoppingpal/contracts";
 
 /**
  * Pure catalog query logic. Used by the static provider directly and by unit

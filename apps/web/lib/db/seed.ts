@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import * as schema from "@/db/schema";
-import { SEED_PRODUCTS } from "@/lib/catalog/data/products";
+import { SEED_PRODUCTS } from "@shoppingpal/contracts";
 import { deterministicUuid } from "@shoppingpal/contracts";
 import type { Database } from "@/lib/db";
 

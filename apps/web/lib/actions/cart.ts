@@ -46,6 +46,7 @@ export async function addToCartAction(
     return { ok: true, data: cart };
   } catch (error) {
     if (error instanceof Error && error.name === "CartError") {
+      console.error("[cart] add rejected:", error.message);
       return { ok: false, error: error.message };
     }
     console.error("[cart] add failed:", error);

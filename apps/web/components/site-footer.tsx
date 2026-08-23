@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CATEGORY_LABELS, CATEGORY_SLUGS } from "@/lib/catalog/types";
+import { CATEGORY_LABELS, CATEGORY_SLUGS } from "@shoppingpal/contracts";
 
 export function SiteFooter() {
   return (

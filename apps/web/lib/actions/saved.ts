@@ -3,7 +3,7 @@
 import { getSessionUser } from "@/lib/auth/server";
 import { getSavedService } from "@/lib/saved";
 import { getCatalogProvider } from "@/lib/catalog";
-import type { Product } from "@/lib/catalog/types";
+import type { Product } from "@shoppingpal/contracts";
 
 export interface SavedState {
   productIds: string[];

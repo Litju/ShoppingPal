@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CategorySlug } from "@/lib/catalog/types";
+import type { CategorySlug } from "@shoppingpal/contracts";
 
 export function FiltersPanel({
   categories,

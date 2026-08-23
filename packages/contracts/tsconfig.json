@@ -1,7 +1,12 @@
 {
   "extends": "@shoppingpal/config/tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"]
   },
   "include": ["src"]
 }

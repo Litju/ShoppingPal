@@ -8,8 +8,8 @@ import type {
   CatalogQuery,
   CategorySlug,
   Product,
-} from "@/lib/catalog/types";
-import { CATEGORY_LABELS } from "@/lib/catalog/types";
+} from "@shoppingpal/contracts";
+import { CATEGORY_LABELS } from "@shoppingpal/contracts";
 
 type ProductRow = typeof schema.products.$inferSelect;
 

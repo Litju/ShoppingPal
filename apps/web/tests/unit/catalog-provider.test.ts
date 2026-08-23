@@ -5,8 +5,8 @@ import {
   buildBundleFromCandidates,
   validateExplicitBundle,
 } from "@/lib/catalog/bundle";
-import { SEED_PRODUCTS } from "@/lib/catalog/data/products";
-import type { Product } from "@/lib/catalog/types";
+import { SEED_PRODUCTS } from "@shoppingpal/contracts";
+import type { Product } from "@shoppingpal/contracts";
 
 const provider = new StaticCatalogProvider();
 

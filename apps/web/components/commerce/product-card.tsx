@@ -6,7 +6,7 @@ import { ProductImage } from "@/components/commerce/product-image";
 import { SaveButton } from "@/components/commerce/save-button";
 import { StockBadge } from "@/components/commerce/stock-badge";
 import { Badge } from "@/components/ui/badge";
-import type { Product } from "@/lib/catalog/types";
+import type { Product } from "@shoppingpal/contracts";
 
 export function ProductCard({
   product,

@@ -7,7 +7,7 @@ import {
   MAX_QTY_PER_LINE,
 } from "@shoppingpal/contracts";
 import { computeRecommendation } from "@/lib/ai/explain";
-import type { Product } from "@/lib/catalog/types";
+import type { Product } from "@shoppingpal/contracts";
 
 describe("cart line validation (pure rules)", () => {
   it("clamps into [1, MAX_QTY_PER_LINE]", () => {

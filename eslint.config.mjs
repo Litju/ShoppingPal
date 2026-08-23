@@ -35,6 +35,8 @@ const eslintConfig = [
       "**/.next/**",
       "**/.data/**",
       "**/.turbo/**",
+      "**/.medusa/**",
+      "packages/contracts/dist/**",
       "**/out/**",
       "**/playwright-report/**",
       "**/test-results/**",

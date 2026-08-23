@@ -27,3 +27,10 @@ coverage/
 .DS_Store
 Thumbs.db
 *.log
+
+# medusa local env
+apps/commerce/.env
+**/.medusa/
+
+# compiled contracts
+packages/contracts/dist/

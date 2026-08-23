@@ -1,0 +1,52 @@
+name: shoppingpal
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shoppingpal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shoppingpal
+      POSTGRES_PASSWORD: shoppingpal
+      POSTGRES_DB: shoppingpal
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shoppingpal -d shoppingpal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: shoppingpal-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  typesense:
+    image: typesense/typesense:27.1
+    container_name: shoppingpal-typesense
+    restart: unless-stopped
+    command: ["--data-dir", "/data", "--api-key=shoppingpal-dev-key", "--enable-cors"]
+    ports:
+      - "8108:8108"
+    volumes:
+      - tsdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8108/health | grep -q ok || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
+  tsdata:

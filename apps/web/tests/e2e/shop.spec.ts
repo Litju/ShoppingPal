@@ -32,6 +32,10 @@ test.describe("Shopping Pal desktop flows", () => {
 
     /* 4. Open a product */
     await page.locator('[data-testid="product-grid"] a').first().click();
+    await expect(page).toHaveURL(/\/products\/marlowe-pulse-anc-headphones$/);
+    await expect(
+      page.getByRole("heading", { name: "Marlowe Sound Pulse ANC Headphones" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: /Ask Shopping Pal about this/i })).toBeVisible();
 
     /* 5. Add product to cart from the PDP */
@@ -87,6 +91,10 @@ test.describe("Shopping Pal desktop flows", () => {
     await expect(page.getByTestId("cart-heading")).toBeVisible();
     const lineCount = await page.locator("[data-testid^='cart-line-']").count();
     expect(lineCount).toBeGreaterThanOrEqual(2);
+    await page
+      .getByRole("button", { name: /Remove Northwind .* from cart/ })
+      .click();
+    await expect(page.getByTestId("cart-count")).toHaveText(String(countBefore));
 
     /* 13. Multi-product bundle under a stated budget */
     await page.getByTestId("assistant-launcher-desktop").or(page.getByTestId("assistant-launcher")).first().click();
@@ -104,8 +112,17 @@ test.describe("Shopping Pal desktop flows", () => {
       .locator("#pal-composer")
       .fill("prepare checkout");
     await page.locator("#pal-composer").press("Enter");
-    const checkoutCard = page.getByText("Order prepared", { exact: true });
-    await expect(checkoutCard).toBeVisible({ timeout: 30_000 });
+    if (process.env.MEDUSA_BACKEND_URL) {
+      await expect(
+        page.getByText("Checkout isn't available right now. Medusa payment setup is required.", {
+          exact: true,
+        }).first(),
+      ).toBeVisible({ timeout: 30_000 });
+      return;
+    }
+    await expect(page.getByText("Order prepared", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
 
     /* 15. Complete the clearly-labeled demo checkout boundary */
     await page.getByRole("link", { name: "Complete checkout" }).click();

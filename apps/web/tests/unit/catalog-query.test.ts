@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SEED_PRODUCTS } from "@/lib/catalog/data/products";
+import { SEED_PRODUCTS } from "@shoppingpal/contracts";
 import {
   applyCatalogQuery,
   buildSearchableText,
@@ -8,7 +8,7 @@ import {
   tokenize,
 } from "@/lib/catalog/query";
 import { deterministicUuid } from "@shoppingpal/contracts";
-import type { CatalogQuery, Product } from "@/lib/catalog/types";
+import type { CatalogQuery, Product } from "@shoppingpal/contracts";
 
 function makeProduct(overrides: Partial<Product> & { id: string }): Product {
   return {

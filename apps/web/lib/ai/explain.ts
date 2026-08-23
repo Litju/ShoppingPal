@@ -1,4 +1,4 @@
-﻿import type { Product } from "@/lib/catalog/types";
+﻿import type { Product } from "@shoppingpal/contracts";
 import { formatMoney } from "@shoppingpal/contracts";
 import type { Recommendation } from "@/lib/ai/schemas";
 

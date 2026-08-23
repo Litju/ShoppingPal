@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 
 import { ProductCard } from "@/components/commerce/product-card";
-import type { Product } from "@/lib/catalog/types";
+import type { Product } from "@shoppingpal/contracts";
 
 const VIEWED_KEY = "sp_recently_viewed";
 

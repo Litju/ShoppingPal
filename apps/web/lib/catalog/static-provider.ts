@@ -4,12 +4,12 @@ import type {
   CatalogQuery,
   CategorySlug,
   Product,
-} from "@/lib/catalog/types";
-import { CATEGORY_LABELS, CATEGORY_SLUGS } from "@/lib/catalog/types";
+} from "@shoppingpal/contracts";
+import { CATEGORY_LABELS, CATEGORY_SLUGS } from "@shoppingpal/contracts";
 import { applyCatalogQuery, buildSearchableText } from "@/lib/catalog/query";
 import { deterministicUuid } from "@shoppingpal/contracts";
 
-import { SEED_PRODUCTS, type SeedProduct } from "@/lib/catalog/data/products";
+import { SEED_PRODUCTS, type SeedProduct } from "@shoppingpal/contracts";
 
 export interface StaticCatalogOptions {
   /** Provide to use custom rows (tests). Defaults to SEED_PRODUCTS. */

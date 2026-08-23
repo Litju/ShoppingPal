@@ -8,7 +8,7 @@ import {
 } from "@/components/commerce/filters-panel";
 import { ProductCard } from "@/components/commerce/product-card";
 import { getCatalogProvider } from "@/lib/catalog";
-import { CATEGORY_LABELS, CATEGORY_SLUGS, type CategorySlug, type SortOption } from "@/lib/catalog/types";
+import { CATEGORY_LABELS, CATEGORY_SLUGS, type CategorySlug, type SortOption } from "@shoppingpal/contracts";
 
 export const dynamic = "force-dynamic";
 
