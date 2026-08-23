@@ -19,8 +19,6 @@ import {
 } from "@/lib/ai/schemas";
 import { getCartProvider, ensureCartRef, resolveCartRef } from "@/lib/cart/session";
 import { getSessionUser } from "@/lib/auth/server";
-import { getCheckoutService } from "@/lib/checkout";
-import { medusaEnabled } from "@/lib/commerce/config";
 
 /**
  * Engine functions: the single source of commerce truth for Shopping Pal.
@@ -391,37 +389,8 @@ async function ensureGuestRef(): Promise<{ kind: "guest"; token: string }> {
 export async function runPrepareCheckout(): Promise<
   z.infer<typeof prepareCheckoutOutput>
 > {
-  if (medusaEnabled()) {
-    return {
-      ready: false,
-      message: "Checkout isn't available right now. Medusa payment setup is required.",
-    };
-  }
-  const checkout = await getCheckoutService();
-  const provider = await getCartProvider();
-  if (!checkout || !provider) {
-    return { ready: false, message: "Checkout isn't available right now." };
-  }
-  const ref = await resolveCartRef();
-  if (!ref) return { ready: false, message: "Your cart is empty." };
-  const cart = await provider.getCart(ref);
-  if (cart.lines.length === 0) {
-    return { ready: false, message: "Your cart is empty — add something first." };
-  }
-  const user = await getSessionUser();
-  const origin = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-  const prep = await checkout.prepareCheckout(user?.id ?? null, cart, origin);
   return {
-    ready: true,
-    orderId: prep.orderId,
-    url: prep.url,
-    mode: prep.mode,
-    total: cart.total,
-    currency: cart.currency,
-    itemCount: cart.itemCount,
-    message:
-      prep.mode === "stripe"
-        ? "I've prepared a Stripe Checkout session. Complete payment to place the order."
-        : "I've prepared your order. Open checkout to confirm it — I'll never place an order without you.",
+    ready: false,
+    message: "Checkout isn't available right now. Medusa payment setup is required.",
   };
 }

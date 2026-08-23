@@ -108,12 +108,8 @@ export function CartButton() {
             onClick={async () => {
               setStarting(true);
               const result = await startCheckoutAction();
-              if (!result.ok) {
-                alert(result.error);
-                setStarting(false);
-                return;
-              }
-              window.location.href = result.url;
+              alert(result.error);
+              setStarting(false);
             }}
           >
             {starting && <Loader2 className="animate-spin" />}

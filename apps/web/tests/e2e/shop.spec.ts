@@ -7,6 +7,7 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("Shopping Pal desktop flows", () => {
   test("full shopping journey with the agent", async ({ page }, testInfo) => {
+    test.skip(!process.env.MEDUSA_BACKEND_URL, "Medusa commerce prerequisite");
     test.skip(testInfo.project.name !== "desktop-chromium", "Desktop viewport flow");
     test.setTimeout(180_000);
 
@@ -112,26 +113,11 @@ test.describe("Shopping Pal desktop flows", () => {
       .locator("#pal-composer")
       .fill("prepare checkout");
     await page.locator("#pal-composer").press("Enter");
-    if (process.env.MEDUSA_BACKEND_URL) {
-      await expect(
-        page.getByText("Checkout isn't available right now. Medusa payment setup is required.", {
-          exact: true,
-        }).first(),
-      ).toBeVisible({ timeout: 30_000 });
-      return;
-    }
-    await expect(page.getByText("Order prepared", { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    /* 15. Complete the clearly-labeled demo checkout boundary */
-    await page.getByRole("link", { name: "Complete checkout" }).click();
-    await expect(page.getByText("DEMO CHECKOUT", { exact: false })).toBeVisible();
-    await expect(page.getByTestId("demo-total")).toContainText("$");
-    await page.getByTestId("complete-demo-order").click();
-    await expect(page.getByTestId("success-heading")).toHaveText("Order confirmed", {
-      timeout: 30_000,
-    });
+    await expect(
+      page.getByText("Checkout isn't available right now. Medusa payment setup is required.", {
+        exact: true,
+      }).first(),
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test("empty search shows a helpful empty state", async ({ page }, testInfo) => {

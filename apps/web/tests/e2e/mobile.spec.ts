@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("Shopping Pal mobile flows", () => {
   test("mobile shopping with the assistant sheet", async ({ page }, testInfo) => {
+    test.skip(!process.env.MEDUSA_BACKEND_URL, "Medusa commerce prerequisite");
     test.skip(testInfo.project.name !== "mobile-chromium", "Mobile viewport flow");
     test.setTimeout(150_000);
 

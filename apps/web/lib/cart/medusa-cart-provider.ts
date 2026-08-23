@@ -7,13 +7,13 @@ import {
 
 import { getMedusaConfig } from "@/lib/commerce/config";
 import { MedusaClient } from "@/lib/commerce/medusa-client";
-import type { CartRef } from "@/lib/cart/drizzle-cart-provider";
+import type { CartRef } from "@/lib/cart/types";
 
 /**
  * MedusaCartAdapter — canonical cart authority (design doc §4/§11.2).
  *
- * Implements the same surface as the legacy DrizzleCartProvider so the
- * storefront session layer can switch runtimes without UI changes.
+ * Implements the server-side cart surface consumed by the storefront UI and
+ * agent bridge.
  *
  * Identity mapping:
  *   {kind:"guest", token}  → token stores the anonymous Medusa cart id.

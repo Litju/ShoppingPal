@@ -5,8 +5,8 @@ import { z } from "zod";
  *
  * MEDUSA_BACKEND_URL set  → Medusa is canonical commerce authority
  *                           (catalog/cart served through Medusa Store API).
- * MEDUSA_BACKEND_URL unset → embedded legacy stack (PGlite demo mode),
- *                            kept only until final legacy removal.
+ * MEDUSA_BACKEND_URL unset → catalog-only degraded mode. Commerce mutations
+ *                            are unavailable until Medusa is configured.
  */
 
 const medusaConfigSchema = z.object({

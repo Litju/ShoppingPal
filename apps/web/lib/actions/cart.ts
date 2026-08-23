@@ -42,7 +42,7 @@ export async function addToCartAction(
 ): Promise<ActionResult<CartDTO>> {
   try {
     const provider = await getCartProvider();
-    if (!provider) return { ok: false, error: "Cart unavailable in demo mode." };
+    if (!provider) return { ok: false, error: "Cart unavailable until Medusa is configured." };
     const ref = await ensureCartRef();
     const cart = await provider.addItem(ref, productId, quantity, "ui");
     revalidatePath("/", "layout");
@@ -63,7 +63,7 @@ export async function setQuantityAction(
 ): Promise<ActionResult<CartDTO>> {
   try {
     const provider = await getCartProvider();
-    if (!provider) return { ok: false, error: "Cart unavailable in demo mode." };
+    if (!provider) return { ok: false, error: "Cart unavailable until Medusa is configured." };
     const ref = await ensureCartRef();
     const cart =
       quantity === 0
@@ -85,7 +85,7 @@ export async function removeFromCartAction(
 ): Promise<ActionResult<CartDTO>> {
   try {
     const provider = await getCartProvider();
-    if (!provider) return { ok: false, error: "Cart unavailable in demo mode." };
+    if (!provider) return { ok: false, error: "Cart unavailable until Medusa is configured." };
     const ref = await ensureCartRef();
     const cart = await provider.removeItem(ref, productId);
     revalidatePath("/cart");

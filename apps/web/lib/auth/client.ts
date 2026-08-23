@@ -4,8 +4,7 @@ import * as React from "react";
 
 /**
  * Lightweight session bindings over the stable ShoppingPal auth endpoints.
- * The server route selects Medusa Auth in commerce mode and keeps the demo
- * fallback contract while the legacy stack is being removed.
+ * The server route selects Medusa Auth and keeps the UI contract stable.
  */
 
 export interface SessionUser {

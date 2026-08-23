@@ -168,11 +168,6 @@ function ToolPartView({ part, streaming }: { part: any; streaming: boolean }) {
         <CheckoutCard
           toolCallId={toolCallId}
           ready={Boolean(part.output.ready)}
-          url={part.output.url}
-          mode={part.output.mode}
-          total={part.output.total}
-          currency={part.output.currency}
-          itemCount={part.output.itemCount}
           message={part.output.message}
         />
       );

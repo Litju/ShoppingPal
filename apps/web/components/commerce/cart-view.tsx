@@ -44,12 +44,8 @@ export function CartView({ compact = false }: { compact?: boolean }) {
   async function checkout() {
     setStarting(true);
     const result = await startCheckoutAction();
-    if (!result.ok) {
-      toast.error(result.error ?? "Could not start checkout.");
-      setStarting(false);
-      return;
-    }
-    window.location.href = result.url;
+    toast.error(result.error);
+    setStarting(false);
   }
 
   return (

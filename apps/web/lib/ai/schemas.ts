@@ -207,11 +207,5 @@ export const prepareCheckoutInput = z.object({});
 
 export const prepareCheckoutOutput = z.object({
   ready: z.boolean(),
-  orderId: z.string().optional(),
-  url: z.string().optional(),
-  mode: z.enum(["stripe", "demo"]).optional(),
-  total: z.number().int().optional(),
-  currency: z.string().optional(),
-  itemCount: z.number().int().optional(),
   message: z.string().optional(),
 });

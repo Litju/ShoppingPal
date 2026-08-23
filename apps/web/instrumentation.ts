@@ -1,7 +1,7 @@
 /**
  * Runs once per server process at boot, before any request is served.
- * Warming the database here guarantees schema creation and demo seeding
- * finish single-threaded — request-time lazy init would otherwise let
+ * Warming the non-commerce state store here guarantees schema creation
+ * finishes single-threaded — request-time lazy init would otherwise let
  * multiple route bundles race PGlite against the same data directory.
  */
 export async function register() {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { CartError } from "@shoppingpal/contracts";
-import type { CartRef } from "@/lib/cart/drizzle-cart-provider";
+import type { CartRef } from "@/lib/cart/types";
 import { MedusaCartProvider } from "@/lib/cart/medusa-cart-provider";
 import type { MedusaClient } from "@/lib/commerce/medusa-client";
 

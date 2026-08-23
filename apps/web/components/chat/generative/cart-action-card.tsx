@@ -1,10 +1,9 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 
 import { useSyncCartOnChange } from "@/components/providers/cart-provider";
-import { Button } from "@/components/ui/button";
 import type { CartPayload } from "@/lib/ai/schemas";
 import { formatMoney } from "@shoppingpal/contracts";
 
@@ -22,7 +21,6 @@ export function CartActionCard({
   cart: CartPayload | null;
   action: "add" | "update" | "remove";
 }) {
-  // Resync global cart UI with the mutation Shopping Pal made server-side.
   useSyncCartOnChange(toolCallId);
 
   const itemCount = cart?.itemCount ?? null;
@@ -54,7 +52,7 @@ export function CartActionCard({
             </span>
             <span>Subtotal {formatMoney(cart.subtotal, cart.currency)}</span>
             <Link href="/cart" className="font-medium text-primary hover:underline">
-              View cart â†’
+              View cart -&gt;
             </Link>
           </div>
         )}
@@ -72,60 +70,20 @@ export function SavedChip({ message }: { message: string }) {
   );
 }
 
-/** Checkout preparation — the user completes payment themselves. */
+/** Checkout status card. It never represents a locally-created order. */
 export function CheckoutCard({
   toolCallId,
-  url,
-  mode,
-  total,
-  currency,
-  itemCount,
   ready,
   message,
 }: {
   toolCallId: string;
-  url?: string;
-  mode?: "stripe" | "demo";
-  total?: number;
-  currency?: string;
-  itemCount?: number;
   ready: boolean;
   message?: string;
 }) {
   useSyncCartOnChange(toolCallId);
-  if (!ready) {
-    return (
-      <div className="my-2 rounded-lg border border-warning/40 bg-card p-4 text-sm">
-        {message ?? "Checkout isn't ready."}
-      </div>
-    );
-  }
   return (
-    <div className="my-2 rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">Order prepared</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {itemCount} item{itemCount === 1 ? "" : "s"}
-            {total !== undefined && ` Â· ${formatMoney(total, currency)}`}
-          </p>
-        </div>
-        {mode === "demo" ? (
-          <span className="rounded-full border border-warning/50 bg-warning/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-warning">
-            Demo checkout
-          </span>
-        ) : (
-          <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Stripe
-          </span>
-        )}
-      </div>
-      <Button asChild className="mt-3 w-full" size="lg">
-        <a href={url ?? "#"}>Complete checkout</a>
-      </Button>
-      <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
-        I never place orders on my own — payment is always completed by you.
-      </p>
+    <div className="my-2 rounded-lg border border-warning/40 bg-card p-4 text-sm">
+      {ready ? "Checkout is ready." : message ?? "Checkout isn't ready."}
     </div>
   );
 }

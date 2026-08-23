@@ -15,13 +15,12 @@ export interface DatabaseHandle {
 /**
  * Single database type for the whole app. Runtime drivers:
  * - DATABASE_URL set  â†’ Postgres (works with Neon pooled URLs, Supabase, RDS…)
- * - DATABASE_URL emptyâ†’ embedded PGlite persisted under .data/pg (demo mode)
+ * - DATABASE_URL empty → embedded PGlite persisted under .data/pg for
+ *   non-commerce saved/chat state only
  */
 type Executor = import("drizzle-orm/postgres-js").PostgresJsDatabase<typeof schema>;
 
 export type Database = Executor;
-
-const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
 /**
  * Production Next.js bundles lib/db separately per route/runtime entrypoint,
@@ -42,7 +41,7 @@ export function databaseConfigured(): boolean {
 /**
  * Whether a usable database exists at all. With no DATABASE_URL the app
  * transparently uses embedded PGlite, so this is almost always true —
- * demo mode has full cart/order/auth functionality.
+ * both backends hold saved items and conversation persistence only.
  */
 export async function databaseAvailable(): Promise<boolean> {
   try {
@@ -68,7 +67,7 @@ async function createHandle(): Promise<DatabaseHandle> {
     return { db: drizzle(client, { schema }), kind: "postgres" };
   }
 
-  // Zero-config demo database: embedded Postgres (WASM) persisted under .data/pg
+  // Zero-config non-commerce state store: embedded Postgres (WASM).
   const { PGlite } = await import("@electric-sql/pglite");
   const dataDir = path.join(process.cwd(), ".data", "pg");
   fs.mkdirSync(dataDir, { recursive: true });
@@ -89,11 +88,6 @@ export function getDatabase(): Promise<DatabaseHandle> {
     globalForDb.__shoppingPalDbHandle = (async () => {
       const handle = await createHandle();
       await ensureSchema(handle);
-      // Seed-on-boot keeps every backend consumer (cart, auth, checkout,
-      // saved) consistent with the catalog's deterministic product ids.
-      // Idempotent: no-op whenever the products table already has rows.
-      const { ensureSeeded } = await import("@/lib/db/seed");
-      await ensureSeeded(handle.db);
       return handle;
     })().catch((error) => {
       globalForDb.__shoppingPalDbHandle = undefined;
@@ -105,7 +99,7 @@ export function getDatabase(): Promise<DatabaseHandle> {
 
 /**
  * Warm the database once at server boot (called from instrumentation.ts)
- * so schema creation and seeding complete before any request can race it.
+ * so schema creation completes before any request can race it.
  */
 export async function warmDatabase(): Promise<boolean> {
   try {
@@ -117,55 +111,33 @@ export async function warmDatabase(): Promise<boolean> {
   }
 }
 
-/** Create tables when missing so fresh environments are usable immediately. */
+/** Create non-commerce state tables when missing. */
 export async function ensureSchema(handle: DatabaseHandle): Promise<void> {
   if (globalForDb.__shoppingPalDbSchemaReady) return;
-  try {
-    const result = await handle.db.execute<{ regclass: string | null }>(
-      sql`select to_regclass('public.products') as regclass`,
-    );
-    const rows = extractRows<{ regclass: string | null }>(result);
-    if (rows[0]?.regclass != null) {
-      globalForDb.__shoppingPalDbSchemaReady = true;
-      return;
-    }
-  } catch {
-    // fall through to migration
-  }
   await runMigrations(handle.db);
   globalForDb.__shoppingPalDbSchemaReady = true;
 }
 
-/** Apply generated drizzle migrations from ./drizzle */
+/** Apply the small non-commerce schema without a legacy migration directory. */
 export async function runMigrations(db: Database): Promise<void> {
-  const journalPath = path.join(MIGRATIONS_FOLDER, "meta", "_journal.json");
-  if (!fs.existsSync(journalPath)) {
-    throw new Error(
-      "No migrations found. Run `pnpm db:generate` to create them from db/schema.ts.",
-    );
+  const statements = [
+    `ALTER TABLE IF EXISTS "saved_products" DROP CONSTRAINT IF EXISTS "saved_products_user_id_user_id_fk"`,
+    `ALTER TABLE IF EXISTS "saved_products" DROP CONSTRAINT IF EXISTS "saved_products_product_id_products_id_fk"`,
+    `ALTER TABLE IF EXISTS "conversations" DROP CONSTRAINT IF EXISTS "conversations_user_id_user_id_fk"`,
+    `ALTER TABLE IF EXISTS "saved_products" ALTER COLUMN "product_id" TYPE text USING "product_id"::text`,
+    `DROP TABLE IF EXISTS "cart_items", "carts", "order_items", "orders", "products" CASCADE`,
+    `DROP TABLE IF EXISTS "account", "session", "verification", "user" CASCADE`,
+    `CREATE TABLE IF NOT EXISTS "saved_products" ("id" uuid PRIMARY KEY NOT NULL, "user_id" text, "guest_token" text, "product_id" text NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS "conversations" ("id" uuid PRIMARY KEY NOT NULL, "user_id" text, "guest_token" text, "title" text DEFAULT 'New conversation' NOT NULL, "context" jsonb DEFAULT '{}'::jsonb NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL, "updated_at" timestamp with time zone DEFAULT now() NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS "messages" ("id" uuid PRIMARY KEY NOT NULL, "conversation_id" uuid NOT NULL REFERENCES "conversations"("id") ON DELETE cascade, "role" text NOT NULL, "parts" jsonb DEFAULT '[]'::jsonb NOT NULL, "created_at" timestamp with time zone DEFAULT now() NOT NULL)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "saved_products_user_unique" ON "saved_products" ("user_id", "product_id")`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "saved_products_guest_unique" ON "saved_products" ("guest_token", "product_id")`,
+    `CREATE INDEX IF NOT EXISTS "conversations_user_idx" ON "conversations" ("user_id")`,
+    `CREATE INDEX IF NOT EXISTS "messages_conversation_idx" ON "messages" ("conversation_id")`,
+  ];
+  for (const statement of statements) {
+    await db.execute(sql.raw(statement));
   }
-  interface JournalEntry {
-    tag: string;
-  }
-  const journal = JSON.parse(
-    fs.readFileSync(journalPath, "utf8"),
-  ) as { entries: JournalEntry[] };
-  for (const entry of journal.entries) {
-    const file = path.join(MIGRATIONS_FOLDER, `${entry.tag}.sql`);
-    const contents = fs.readFileSync(file, "utf8");
-    for (const statement of splitStatements(contents)) {
-      await db.execute(sql.raw(statement));
-    }
-  }
-}
-
-function splitStatements(sqlText: string): string[] {
-  const byMarker = sqlText.split(/--> statement-breakpoint;?\s*\n?/g);
-  const chunks = byMarker.length > 1 ? byMarker : sqlText.split(/;\s*\n/g);
-  return chunks
-    .flatMap((chunk) => chunk.split(/;\s*(?:\n|$)/))
-    .map((s) => s.replace(/^\s*;+/, "").trim())
-    .filter((s) => s.length > 0 && !/^--/.test(s));
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

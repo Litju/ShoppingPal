@@ -278,9 +278,7 @@ async function respond(w: DemoWriter, rawText: string, sessionKey: string) {
         await w.text(prep.message ?? "Checkout isn't ready yet.");
         return;
       }
-      await w.text(
-        `Order prepared: ${prep.itemCount} item(s), ${formatMoney(prep.total ?? 0)}. Open the checkout card below to finish payment yourself — I never place orders on my own.`,
-      );
+      await w.text("Checkout is ready.");
       return;
     }
 

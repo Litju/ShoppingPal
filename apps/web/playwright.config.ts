@@ -30,7 +30,6 @@ export default defineConfig({
       OPENAI_API_KEY: "",
       ANTHROPIC_API_KEY: "",
       GOOGLE_GENERATIVE_AI_API_KEY: "",
-      STRIPE_SECRET_KEY: "",
       NODE_ENV: "production",
     },
   },

@@ -11,6 +11,6 @@ export async function GET() {
   return NextResponse.json({
     authEnabled,
     googleEnabled: false,
-    stripeEnabled: Boolean(process.env.STRIPE_SECRET_KEY?.trim()),
+    checkoutEnabled: false,
   });
 }

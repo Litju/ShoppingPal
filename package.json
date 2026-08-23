@@ -13,10 +13,7 @@
     "lint": "eslint .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:e2e": "pnpm --filter @shoppingpal/web test:e2e",
-    "db:generate": "pnpm --filter @shoppingpal/web db:generate",
-    "db:migrate": "pnpm --filter @shoppingpal/web db:migrate",
-    "db:seed": "pnpm --filter @shoppingpal/web db:seed"
+    "test:e2e": "pnpm --filter @shoppingpal/web test:e2e"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.3.1",

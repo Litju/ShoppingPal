@@ -145,7 +145,7 @@ export function createShoppingPalTools() {
 
     prepareCheckout: tool({
       description:
-        "Prepare the current cart for checkout. Creates the order snapshot and returns a checkout URL the USER must open — never claim a purchase is complete.",
+        "Report whether the current cart can proceed to canonical checkout. Never create a local order or claim that payment succeeded.",
       inputSchema: prepareCheckoutInput,
       outputSchema: prepareCheckoutOutput,
       execute: () => runPrepareCheckout(),
