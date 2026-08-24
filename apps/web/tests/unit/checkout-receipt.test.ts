@@ -25,12 +25,15 @@ describe("checkout receipt binding", () => {
   });
 
   it("fails closed in production without the dedicated receipt secret", () => {
-    const previousNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-    delete process.env.CHECKOUT_RECEIPT_SECRET;
-
-    expect(checkoutReceiptConfigured()).toBe(false);
-
-    process.env.NODE_ENV = previousNodeEnv;
+    const env = process.env as Record<string, string | undefined>;
+    const previousNodeEnv = env.NODE_ENV;
+    try {
+      env.NODE_ENV = "production";
+      delete env.CHECKOUT_RECEIPT_SECRET;
+      expect(checkoutReceiptConfigured()).toBe(false);
+    } finally {
+      if (previousNodeEnv === undefined) delete env.NODE_ENV;
+      else env.NODE_ENV = previousNodeEnv;
+    }
   });
 });
