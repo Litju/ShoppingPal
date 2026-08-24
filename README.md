@@ -13,7 +13,8 @@ The system is designed around explicit boundaries:
 ```text
 Browser
   -> Next.js storefront
-  -> Eve session runtime / FastAPI
+  -> official Eve session runtime in `apps/web/agent`
+  -> FastAPI typed graph boundary
   -> LangGraph ShoppingGraph
        -> Typesense discovery
        -> Medusa canonical commerce
@@ -34,7 +35,7 @@ The web server derives the actor scope, revalidates proposed mutations against c
 - Idempotent commerce mutations with price and inventory revalidation
 - Prompt-injection boundaries for untrusted catalog content
 - Deterministic degraded operation when external model credentials are absent
-- Production-style unit, service, browser, and clean-clone qualification
+- Production-oriented unit, service, and build qualification with explicit live-service gates
 
 ## Stack
 
@@ -43,8 +44,8 @@ The web server derives the actor scope, revalidates proposed mutations against c
 | Storefront | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Radix UI | Product browsing, PDPs, cart UI, accounts, and assistant UI |
 | Commerce | Medusa 2.19, PostgreSQL 16, Redis 7, Docker Compose | Canonical commerce state and mutations |
 | Search | Typesense 27.1 | Discovery projection only |
-| Agent service | Python 3.13, FastAPI, Pydantic 2, Uvicorn | Conversation, streaming, approvals, and service boundary |
-| Agent workflow | Eve, LangGraph, LangChain Core | Session runtime, explicit shopping workflow, and typed runnable boundary |
+| Agent service | Python 3.13, FastAPI, Pydantic 2, Uvicorn | Typed graph boundary, actor scope, and internal service authentication |
+| Agent workflow | Vercel Eve, LangGraph, LangChain Core | Session runtime in the web app, explicit shopping workflow, and typed runnable boundary |
 | Quality | pnpm, Turborepo, Vitest, Playwright, Ruff, Pyright, Pytest | Workspace orchestration and qualification |
 
 ## Local topology
@@ -157,7 +158,13 @@ The complete qualification receipt, service limitations, and clean-clone notes a
 
 ## Checkout and demo boundaries
 
-Stripe is an optional Medusa payment provider. Until a payment provider is configured, checkout returns an explicit unavailable response and does not create an order or claim that a payment succeeded. The deterministic assistant path is a local demonstration mode; it never represents an external model or replaces Medusa as commerce authority.
+When Medusa and its Stripe provider are configured, `/checkout` performs the real Medusa v2 flow: the server action updates the canonical cart and initializes a Stripe payment session, the browser confirms the payment with the public Stripe key, and the server completes the cart. An order reference is shown only after Medusa returns an order result. `STRIPE_CAPTURE=true` is the default; set it explicitly in the commerce environment when changing capture behavior.
+
+Without the required Medusa or Stripe configuration, checkout returns an explicit configuration error and creates no order. The deterministic assistant path is a local fallback; it never represents an external model or replaces Medusa as commerce authority.
+
+## Hosted release boundary
+
+This repository snapshot contains deployable integration code, but it does not claim a hosted production deployment. A live release still requires provisioned Postgres/Redis, Medusa, FastAPI, Typesense, Stripe test credentials, an OpenCode Go key, and Vercel environment variables. See [HANDOFF.md](HANDOFF.md) for the exact qualification receipt and remaining external actions.
 
 ## Product screenshots
 

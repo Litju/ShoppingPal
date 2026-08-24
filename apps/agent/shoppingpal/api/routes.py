@@ -6,11 +6,8 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
 
 from shoppingpal.schemas import (
-    EveEnvelope,
-    EveMessageRequest,
     GraphRequest,
     GraphResponse,
     ShoppingMission,
@@ -62,7 +59,7 @@ async def health(request: Request) -> dict[str, str]:
     runtime = _runtime(request)
     return {
         "status": "ok",
-        "runtime": "eve-shoppinggraph",
+        "runtime": "langgraph-shoppinggraph",
         "checkpoint_backend": runtime.settings.checkpoint_backend,
     }
 
@@ -80,52 +77,6 @@ async def run_graph(
         body,
         actor_id=context.actor_id,
         correlation_id=context.correlation_id,
-    )
-
-
-@router.post("/api/v1/eve/sessions/{session_id}/messages", response_model=list[EveEnvelope])
-async def eve_message(
-    request: Request,
-    session_id: str,
-    body: EveMessageRequest,
-    x_actor_id: str | None = Header(default=None),
-    x_correlation_id: str | None = Header(default=None),
-    x_agent_internal_token: str | None = Header(default=None),
-) -> list[EveEnvelope]:
-    context = _context(request, x_actor_id, x_correlation_id, x_agent_internal_token)
-    graph_request = GraphRequest(
-        session_id=session_id,
-        message=body.message,
-        mission_id=body.mission_id,
-        context_product_ids=body.context_product_ids,
-    )
-    return await _runtime(request).require_eve().handle(
-        context.actor_id,
-        graph_request,
-        context.correlation_id,
-    )
-
-
-@router.post("/api/v1/eve/sessions/{session_id}/stream")
-async def eve_stream(
-    request: Request,
-    session_id: str,
-    body: EveMessageRequest,
-    x_actor_id: str | None = Header(default=None),
-    x_correlation_id: str | None = Header(default=None),
-    x_agent_internal_token: str | None = Header(default=None),
-):
-    context = _context(request, x_actor_id, x_correlation_id, x_agent_internal_token)
-    graph_request = GraphRequest(
-        session_id=session_id,
-        message=body.message,
-        mission_id=body.mission_id,
-        context_product_ids=body.context_product_ids,
-    )
-    return StreamingResponse(
-        _runtime(request).require_eve().stream(context.actor_id, graph_request, context.correlation_id),
-        media_type="text/event-stream",
-        headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
     )
 
 

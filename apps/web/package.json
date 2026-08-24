@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Shopping Pal storefront — Next.js 16 + React 19. Your pal for finding the right thing to buy.",
-  "packageManager": "pnpm@11.1.1",
+  "packageManager": "pnpm@10.6.5",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "next dev",
@@ -39,10 +39,13 @@
     "@shoppingpal/contracts": "workspace:*",
     "@shoppingpal/test-utils": "workspace:*",
     "@shoppingpal/ui": "workspace:*",
+    "@stripe/react-stripe-js": "^6.8.2",
+    "@stripe/stripe-js": "^9.14.0",
     "ai": "^7.0.71",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
+    "eve": "0.44.3",
     "lucide-react": "^1.33.0",
     "motion": "^13.1.1",
     "next": "^16.3.1",

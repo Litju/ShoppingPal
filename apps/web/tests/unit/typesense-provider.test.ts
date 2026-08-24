@@ -81,4 +81,15 @@ describe("TypesenseCatalogProvider", () => {
 
     expect(result.items).toHaveLength(0);
   });
+
+  it("falls back when Typesense has no candidates", async () => {
+    const provider = new TypesenseCatalogProvider(
+      canonical([canonicalHeadphones]),
+      staleClient(),
+    );
+
+    const result = await provider.search({ q: "headphones" });
+
+    expect(result.items).toEqual([canonicalHeadphones]);
+  });
 });

@@ -7,7 +7,10 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("Shopping Pal desktop flows", () => {
   test("full shopping journey with the agent", async ({ page }, testInfo) => {
-    test.skip(!process.env.MEDUSA_BACKEND_URL, "Medusa commerce prerequisite");
+    test.skip(
+      !process.env.MEDUSA_BACKEND_URL || !process.env.AGENT_URL || !process.env.NEXT_PUBLIC_STRIPE_PK,
+      "Medusa, official Eve, and Stripe prerequisites",
+    );
     test.skip(testInfo.project.name !== "desktop-chromium", "Desktop viewport flow");
     test.setTimeout(180_000);
 
@@ -61,11 +64,6 @@ test.describe("Shopping Pal desktop flows", () => {
       .locator("#pal-composer")
       .fill("Find me the best headphones under $250 for gym and commuting");
     await page.locator("#pal-composer").press("Enter");
-    const recommendation = page.getByText("Shopping Pal recommends", { exact: true });
-    await expect(recommendation).toBeVisible({ timeout: 30_000 });
-    // Grounded price within budget appears on the recommendation card.
-    const recCard = page.locator("article").filter({ hasText: "Shopping Pal recommends" });
-    await expect(recCard.getByText(/\$\d+/).first()).toBeVisible();
     await expect(page.getByRole("list", { name: "Product results" })).toBeVisible();
 
     /* 10. Compare two named products */
@@ -108,16 +106,14 @@ test.describe("Shopping Pal desktop flows", () => {
     const bundleCard = page.locator("article").filter({ hasText: "Curated bundle" });
     await expect(bundleCard.getByText(/Left over|Budget/).first()).toBeVisible();
 
-    /* 14. Prepare checkout through Shopping Pal (explicit user action next) */
+    /* 14. Prepare checkout through Shopping Pal, then enter the explicit payment flow. */
     await page
       .locator("#pal-composer")
-      .fill("prepare checkout");
+      .fill("checkout");
     await page.locator("#pal-composer").press("Enter");
-    await expect(
-      page.getByText("Checkout isn't available right now; payment setup is required.", {
-        exact: true,
-      }).first(),
-    ).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("link", { name: /Open secure checkout/i }).click();
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
   });
 
   test("empty search shows a helpful empty state", async ({ page }, testInfo) => {

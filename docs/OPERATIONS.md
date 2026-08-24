@@ -6,7 +6,7 @@
 2. Run Medusa migrations, seed the catalog, and create a publishable key.
 3. Sync the Typesense projection from the live Medusa Store API.
 4. Start the agent on `:8200` with the database, checkpoint, Medusa, and internal-token variables.
-5. Build the web app and start the production server on `:3100` before Playwright.
+5. Build the web app and commerce service, then start the production server on `:3100` before Playwright.
 
 Without Medusa variables, the web app is intentionally browse-only. Without an agent URL, the web fallback can demonstrate deterministic assistant responses, but it does not claim external-model reasoning.
 
@@ -32,7 +32,7 @@ uv run pyright
 uv run pytest
 ```
 
-The browser suite skips commerce cases when Medusa is not configured. Those skips represent the documented degraded contract, not passing commerce qualification.
+The browser suite skips commerce cases when Medusa, the agent, or the Stripe public key is not configured. Those skips represent the documented degraded contract, not passing live commerce qualification.
 
 ## Browser qualification hygiene
 
@@ -44,4 +44,4 @@ PowerShell 5.1 can corrupt UTF-8 and add a BOM when rewriting source or JSON fil
 
 Typesense's `/health` endpoint is the service check. The local Docker image may report an unhealthy container when its configured probe depends on a binary not included in the image; that probe state does not change Typesense's discovery-authority boundary.
 
-Checkout is intentionally unavailable until the Medusa Stripe payment provider is configured. A failed or unconfigured payment path must remain an explicit error and must not create a local order.
+Checkout uses the Medusa Stripe payment provider when configured. A failed or unconfigured payment path must remain an explicit error and must not create a local order. The live test requires `MEDUSA_BACKEND_URL`, `MEDUSA_PUBLISHABLE_KEY`, `MEDUSA_REGION_ID`, `NEXT_PUBLIC_STRIPE_PK`, a running agent, and Stripe test credentials in the commerce service.

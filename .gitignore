@@ -15,6 +15,9 @@ next-env.d.ts
 # generated local assistant guidance
 apps/web/AGENTS.md
 
+# eve compiled discovery/runtime artifacts
+**/.eve/
+
 # local data (embedded demo database)
 .data/
 

@@ -23,7 +23,7 @@ Medusa
    |---- Stripe payment provider (optional)
 ```
 
-Eve is the in-repository conversational runtime in `apps/agent/shoppingpal/eve`. It owns session envelopes, streaming events, approvals, and the typed handoff into `ShoppingGraph`. LangGraph owns the explicit workflow; LangChain Core supplies the structured runnable boundary; FastAPI and Pydantic define the service contract.
+Eve is the official conversational runtime in `apps/web/agent`, mounted into Next.js with `withEve`. Its channel and tool boundary own session identity, streaming events, and approvals. The `run_shopping_graph` Eve tool calls the FastAPI service; FastAPI and Pydantic expose only the typed `GraphRequest`/`GraphResponse` boundary into `ShoppingGraph`. LangGraph owns the explicit workflow and LangChain Core supplies the structured runnable boundary.
 
 ## Authority boundaries
 
@@ -31,6 +31,7 @@ Eve is the in-repository conversational runtime in `apps/agent/shoppingpal/eve`.
 - Typesense is a discovery projection. Search candidates are rehydrated from Medusa before ranking or commerce decisions.
 - The agent service owns workflow state, approval policy, canonical revalidation, and Shopping Mission state. It does not mutate Medusa directly.
 - The web server derives actor-scoped cookies and executes `CartProposal` messages through the canonical Medusa cart provider.
+- Checkout updates the canonical Medusa cart, initializes `pp_stripe_stripe`, confirms the returned client secret in the browser, and completes the cart server-side before displaying an order reference.
 - The web database creates only saved-item and conversation state; startup never drops commerce or authentication tables.
 - The web database/PGlite runtime stores saved products and conversation messages only. It does not own commerce records.
 
@@ -48,4 +49,4 @@ Catalog and user-provided text are untrusted data. They can inform a recommendat
 
 The storefront remains usable when the agent is absent. With no agent URL and no model credentials, the web fallback provides deterministic shopping responses for local demonstration. A configured model without the agent service returns an explicit unavailable response rather than activating a second production authority.
 
-When Medusa is absent, the static catalog is browse-only and cart mutations fail explicitly. Checkout remains unavailable until a Medusa payment provider is configured; no local order or simulated payment is created.
+When Medusa is absent, the static catalog is browse-only and cart mutations fail explicitly. Checkout is a real Medusa/Stripe flow when configured. Without the provider, the route fails closed with a configuration error; no local order or simulated payment is created.

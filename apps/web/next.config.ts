@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withEve } from "eve/next";
 
 const nextConfig: NextConfig = {
   transpilePackages: [
@@ -13,4 +14,4 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+export default withEve(nextConfig, { eveRoot: "agent" });

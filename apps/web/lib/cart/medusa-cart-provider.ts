@@ -42,7 +42,40 @@ interface MedusaCart {
   tax_total: number;
   total: number;
   currency_code: string;
+  payment_collection?: MedusaPaymentCollection | null;
 }
+
+interface MedusaPaymentSession {
+  id: string;
+  provider_id: string;
+  data?: Record<string, unknown> | null;
+}
+
+interface MedusaPaymentCollection {
+  id: string;
+  payment_sessions?: MedusaPaymentSession[];
+}
+
+export interface StripeCheckoutInput {
+  email: string;
+  firstName: string;
+  lastName: string;
+  address1: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
+  province?: string;
+  phone?: string;
+}
+
+export interface StripeCheckoutSession {
+  cartId: string;
+  clientSecret: string;
+}
+
+export type MedusaCompleteCartResult =
+  | { type: "order"; order?: { id: string; display_id?: number | string } }
+  | { type: "cart"; error?: { message?: string } | string };
 
 interface StoreProduct {
   id: string;
@@ -154,6 +187,70 @@ export class MedusaCartProvider {
     const cart = await this.fetchCart(cartId);
     if (!cart) return EMPTY_CART;
     return this.toDto(cart);
+  }
+
+  async initializeStripeCheckout(
+    ref: CartRef,
+    input: StripeCheckoutInput,
+  ): Promise<StripeCheckoutSession> {
+    const cartId = await this.findCartIdOrNull(ref);
+    if (!cartId) throw new Error("No active cart.");
+    const cart = await this.fetchCart(cartId);
+    if (!cart || !cart.items?.length) throw new Error("Your cart is empty.");
+
+    const address = {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      address_1: input.address1,
+      city: input.city,
+      postal_code: input.postalCode,
+      country_code: input.countryCode,
+      province: input.province || undefined,
+      phone: input.phone || undefined,
+    };
+    await this.client.post(`/store/carts/${cartId}`, {
+      email: input.email,
+      shipping_address: address,
+      billing_address: address,
+    });
+
+    const refreshed = await this.fetchCart(cartId);
+    let paymentCollection = refreshed?.payment_collection ?? undefined;
+    if (!paymentCollection?.id) {
+      paymentCollection = (
+        await this.client.post<{ payment_collection: MedusaPaymentCollection }>(
+          "/store/payment-collections",
+          { cart_id: cartId },
+        )
+      ).payment_collection;
+    }
+
+    let paymentSession = paymentCollection.payment_sessions?.find(
+      (session) => session.provider_id === "pp_stripe_stripe",
+    );
+    if (!paymentSession) {
+      paymentCollection = (
+        await this.client.post<{ payment_collection: MedusaPaymentCollection }>(
+          `/store/payment-collections/${paymentCollection.id}/payment-sessions`,
+          { provider_id: "pp_stripe_stripe" },
+        )
+      ).payment_collection;
+      paymentSession = paymentCollection.payment_sessions?.find(
+        (session) => session.provider_id === "pp_stripe_stripe",
+      );
+    }
+
+    const clientSecret = paymentSession?.data?.client_secret;
+    if (typeof clientSecret !== "string" || clientSecret.length === 0) {
+      throw new Error("Stripe did not return a payment client secret.");
+    }
+    return { cartId, clientSecret };
+  }
+
+  async completeCheckout(ref: CartRef): Promise<MedusaCompleteCartResult> {
+    const cartId = await this.findCartIdOrNull(ref);
+    if (!cartId) throw new Error("No active cart.");
+    return this.client.post<MedusaCompleteCartResult>(`/store/carts/${cartId}/complete`, {});
   }
 
   async addItem(

@@ -19,4 +19,4 @@ The web server derives `ActorContext` from the Medusa customer session or a scop
 4. The web adapter checks expected canonical price and variant, sends Medusa's idempotency key, and executes the existing server-side cart provider.
 5. Only the returned cart is rendered as an `addToCart` UI part; rejection is plain text and never a success card.
 
-Catalog descriptions are wrapped as untrusted data and cannot authorize tools. Checkout is approval-gated and currently reports Medusa's missing payment setup rather than fabricating order success; neither the agent nor the web database creates a local order.
+Catalog descriptions are wrapped as untrusted data and cannot authorize tools. Checkout is an approval-gated handoff to the explicit `/checkout` UI: Eve can propose or link to checkout, but only Stripe confirmation followed by Medusa cart completion can produce an order reference. Neither the agent nor the web database creates a local order.

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Shopping Pal — an agentic commerce storefront. Your pal for finding the right thing to buy.",
-  "packageManager": "pnpm@11.1.1",
+  "packageManager": "pnpm@10.6.5",
   "engines": {
     "node": ">=20"
   },
@@ -14,6 +14,15 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "pnpm --filter @shoppingpal/web test:e2e"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver",
+      "@electric-sql/pglite",
+      "@tailwindcss/oxide",
+      "sharp"
+    ]
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.3.1",

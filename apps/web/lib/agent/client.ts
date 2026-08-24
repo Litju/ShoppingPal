@@ -2,18 +2,6 @@ import { z } from "zod";
 
 import { runAddToCart } from "@/lib/ai/engine";
 
-const agentEnvelopeSchema = z.object({
-  event: z.enum(["session_started", "graph_result", "approval_required", "error"]),
-  correlation_id: z.string(),
-  session_id: z.string(),
-  payload: z.record(z.string(), z.unknown()),
-});
-
-const agentConfigSchema = z.object({
-  baseUrl: z.string().url(),
-  internalToken: z.string().optional(),
-});
-
 const candidateSchema = z.object({
   product_id: z.string(),
   variant_id: z.string(),
@@ -116,7 +104,7 @@ export async function agentPayloadToUiResult(
   if (payload.kind === "approval_required" && payload.action === "checkout") {
     return {
       events: [],
-      text: "Checkout isn't available right now; payment setup is required.",
+      text: "Open the secure checkout page to enter your shipping and payment details.",
     };
   }
   if (payload.kind === "recommendations") {
@@ -236,55 +224,13 @@ export async function agentPayloadToUiResult(
   return { events: [], text: agentResultText(payload) };
 }
 
-export function getAgentConfig() {
-  const baseUrl = process.env.AGENT_URL?.trim();
-  if (!baseUrl) return null;
-  const parsed = agentConfigSchema.safeParse({
-    baseUrl,
-    internalToken: process.env.AGENT_INTERNAL_TOKEN?.trim() || undefined,
-  });
-  return parsed.success ? parsed.data : null;
-}
-
-export async function runEveAgent(options: {
-  baseUrl: string;
-  internalToken?: string;
-  actorId: string;
-  sessionId: string;
-  message: string;
-  missionId?: string;
-  contextProductIds?: string[];
-}): Promise<Array<z.infer<typeof agentEnvelopeSchema>>> {
-  const response = await fetch(
-    `${options.baseUrl.replace(/\/$/, "")}/api/v1/eve/sessions/${encodeURIComponent(options.sessionId)}/messages`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-actor-id": options.actorId,
-        ...(options.internalToken
-          ? { "x-agent-internal-token": options.internalToken }
-          : {}),
-      },
-      body: JSON.stringify({
-        message: options.message,
-        mission_id: options.missionId ?? null,
-        context_product_ids: options.contextProductIds ?? [],
-      }),
-      cache: "no-store",
-    },
-  );
-  if (!response.ok) throw new Error(`Eve request failed (${response.status})`);
-  return z.array(agentEnvelopeSchema).parse(await response.json());
-}
-
 export function agentResultText(payload: Record<string, unknown>): string {
   if (payload.kind === "cart_proposal") {
     return "I prepared that cart action with the current price and inventory. The storefront will apply it and confirm the canonical result.";
   }
   if (payload.kind === "approval_required") {
     if (payload.action === "checkout") {
-      return "Checkout isn't available right now; payment setup is required.";
+      return "Open the secure checkout page to enter your shipping and payment details.";
     }
     return String(payload.message ?? "This action needs your explicit confirmation before it can proceed.");
   }

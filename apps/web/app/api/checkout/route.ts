@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import { startCheckoutAction } from "@/lib/actions/checkout";
 
-/** Checkout is owned by Medusa; no local order/payment authority remains. */
-export async function POST() {
-  return NextResponse.json(
-    { error: "Checkout isn't available right now; payment setup is required." },
-    { status: 503 },
-  );
+export async function POST(request: Request) {
+  try {
+    const result = await startCheckoutAction(await request.json());
+    return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid checkout request." }, { status: 400 });
+  }
 }

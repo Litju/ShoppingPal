@@ -1,9 +1,11 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 
 import { useSyncCartOnChange } from "@/components/providers/cart-provider";
+import { applyAgentCartAction } from "@/lib/actions/cart";
 import type { CartPayload } from "@/lib/ai/schemas";
 import { formatMoney } from "@shoppingpal/contracts";
 
@@ -83,7 +85,76 @@ export function CheckoutCard({
   useSyncCartOnChange(toolCallId);
   return (
     <div className="my-2 rounded-lg border border-warning/40 bg-card p-4 text-sm">
-      {ready ? "Checkout is ready." : message ?? "Checkout isn't ready."}
+      <p>{ready ? "Checkout is ready." : message ?? "Checkout isn't ready."}</p>
+      {!ready && (
+        <Link href="/checkout" className="mt-3 inline-block font-medium text-primary hover:underline">
+          Open secure checkout →
+        </Link>
+      )}
     </div>
+  );
+}
+
+export function CartProposalCard({
+  toolCallId,
+  action,
+}: {
+  toolCallId: string;
+  action: {
+    action?: "add" | "remove" | "update";
+    operation_id: string;
+    product_id: string;
+    variant_id: string;
+    quantity: number;
+    expected_price: number;
+    currency: string;
+    requires_ui_execution: true;
+  };
+}) {
+  const [result, setResult] = React.useState<{
+    ok: boolean;
+    message: string;
+    cart: CartPayload | null;
+  }>();
+
+  React.useEffect(() => {
+    let active = true;
+    void applyAgentCartAction({
+      action: action.action ?? "add",
+      productId: action.product_id,
+      variantId: action.variant_id,
+      quantity: action.quantity,
+      expectedPrice: action.expected_price,
+      operationId: action.operation_id,
+    }).then((next) => {
+      if (active) {
+        setResult({
+          ok: next.ok,
+          message: next.message,
+          cart: next.cart as CartPayload | null,
+        });
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [action.action, action.expected_price, action.operation_id, action.product_id, action.quantity, action.variant_id]);
+
+  if (!result) {
+    return (
+      <div className="my-2 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground" aria-live="polite">
+        Applying the canonical cart action…
+      </div>
+    );
+  }
+
+  return (
+    <CartActionCard
+      toolCallId={toolCallId}
+      ok={result.ok}
+      message={result.message}
+      cart={result.cart}
+      action={action.action ?? "add"}
+    />
   );
 }
