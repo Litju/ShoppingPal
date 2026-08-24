@@ -1,0 +1,17 @@
+.git/
+.turbo/
+.data/
+apps/agent/
+apps/commerce/
+docs/
+infra/
+**/.next/
+**/.eve/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/playwright-report/
+**/test-results/
+packages/contracts/dist/
