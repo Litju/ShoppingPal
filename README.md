@@ -1,5 +1,11 @@
 # ShoppingPal
 
+Live Demo: hosted commerce release pending provider setup
+
+Source: [github.com/Litju/ShoppingPal](https://github.com/Litju/ShoppingPal)
+
+The FastAPI agent has a verified Vercel Preview at [shoppingpal-agent.vercel.app](https://shoppingpal-agent-dv1bddpq0-julitocrztuga-2084s-projects.vercel.app). The final storefront URL will be added here after the hosted commerce release is provisioned and qualified.
+
 <p align="center">
   <img src="docs/assets/readme/app-home.png" alt="ShoppingPal home screen with the shopping companion prompt and featured catalog" width="100%" />
 </p>
@@ -12,16 +18,46 @@ The system is designed around explicit boundaries:
 
 ```text
 Browser
-  -> Next.js storefront
+  -> Next.js storefront on Vercel (`shoppingpal`)
   -> official Eve session runtime in `apps/web/agent`
-  -> FastAPI typed graph boundary
+  -> FastAPI typed graph boundary on Vercel (`shoppingpal-agent`)
   -> LangGraph ShoppingGraph
-       -> Typesense discovery
-       -> Medusa canonical commerce
-       -> Shopping Mission persistence
+       -> Medusa canonical catalog and commerce state
+       -> PostgreSQL Shopping Mission and checkpoint persistence
+
+Storefront catalog path
+  -> Typesense discovery projection
+  -> Medusa hydration and revalidation
 ```
 
 The web server derives the actor scope, revalidates proposed mutations against current Medusa state, and renders only canonical cart acknowledgements. If the agent is unavailable, the storefront still works. If Medusa is unavailable, browsing is intentionally read-only and checkout reports the limitation instead of simulating a payment.
+
+## Agent workflow
+
+For an assistant turn, the server-side flow is:
+
+1. OpenCode Go with the qualified `gpt-5.6-luna` model produces the structured model response when configured.
+2. Official Eve owns the conversational session, stream, tool boundary, and durable cursor.
+3. Eve calls `run_shopping_graph` through the authenticated FastAPI boundary.
+4. LangGraph classifies intent, loads Shopping Mission context, extracts constraints, queries the canonical Medusa catalog, hydrates candidates, applies hard constraints, and returns typed recommendations, comparisons, compatibility results, bundles, or commerce proposals.
+5. The web server revalidates any commerce proposal and performs the Medusa cart mutation only after the required user approval.
+
+OpenCode Go credentials, the agent internal token, database URLs, provider keys, and webhook secrets are server-only. The browser receives no privileged FastAPI credentials.
+
+## Canonical commerce boundary
+
+Typesense is a disposable read model for fast storefront discovery. Its candidates are never authoritative for price, variant identity, inventory, payment, or order state. The purchase path is always:
+
+```text
+Typesense candidate (optional)
+  -> Medusa product and variant hydration
+  -> current Medusa price and inventory revalidation
+  -> canonical cart mutation
+  -> Stripe test-mode payment session
+  -> Medusa cart completion and canonical order
+```
+
+The model may propose an action, but it cannot mark payment success. Eve approval cannot create an order. Only a successful Stripe/Medusa state transition can produce the purchase result. If Typesense is empty or unavailable, the storefront falls back to canonical Medusa data; if Medusa or Stripe is unavailable, ShoppingPal reports that limitation and does not fabricate commerce success.
 
 ## Demonstrated engineering
 
@@ -91,7 +127,8 @@ pnpm --dir apps/commerce exec medusa db:migrate
 pnpm --dir apps/commerce run db:seed
 $env:MEDUSA_BACKEND_URL = "http://localhost:9000"
 pnpm --dir apps/commerce exec medusa exec ./src/scripts/ensure-publishable-key.ts
-# Copy the publishable key printed above and set the seeded region id.
+# Set the seeded storefront key and region id in the ignored local environment.
+# The bootstrap command intentionally does not log the publishable key.
 $env:MEDUSA_PUBLISHABLE_KEY = "<local-publishable-key>"
 $env:MEDUSA_REGION_ID = "<local-region-id>"
 pnpm --dir apps/commerce exec medusa start
@@ -158,13 +195,31 @@ The complete qualification receipt, service limitations, and clean-clone notes a
 
 ## Checkout and demo boundaries
 
-When Medusa and its Stripe provider are configured, `/checkout` performs the real Medusa v2 flow: the server action updates the canonical cart and initializes a Stripe payment session, the browser confirms the payment with the public Stripe key, and the server completes the cart. An order reference is shown only after Medusa returns an order result. `STRIPE_CAPTURE=true` is the default; set it explicitly in the commerce environment when changing capture behavior.
+Stripe is TEST MODE ONLY. When Medusa and its official `pp_stripe_stripe` provider are configured, `/checkout` performs the real Medusa v2 flow: the server action updates the canonical cart and initializes a Stripe payment session, Stripe Elements confirms the payment with the browser-safe publishable key, and the server completes the cart. An order reference is shown only after Medusa returns an order result. `STRIPE_CAPTURE=true` is the default; set it explicitly in the commerce environment when changing capture behavior.
 
 Without the required Medusa or Stripe configuration, checkout returns an explicit configuration error and creates no order. The deterministic assistant path is a local fallback; it never represents an external model or replaces Medusa as commerce authority.
 
-## Hosted release boundary
+## Deployment topology
 
-This repository snapshot contains deployable integration code, but it does not claim a hosted production deployment. A live release still requires provisioned Postgres/Redis, Medusa, FastAPI, Typesense, Stripe test credentials, an OpenCode Go key, and Vercel environment variables. See [HANDOFF.md](HANDOFF.md) for the exact qualification receipt and remaining external actions.
+The repository is a pnpm/Turborepo monorepo, deployed as separate services. The Vercel storefront uses the official Eve stable `services` pipeline; it has no custom `.output` or `.vercel/output` dashboard directory.
+
+| Component | Hosting and root | Responsibility | Current status |
+| --- | --- | --- | --- |
+| Storefront | Vercel project `shoppingpal`, `apps/web` | Next.js storefront, Eve session runtime, assistant UI, cart, and checkout | Eve/OpenCode Go/streaming/session qualification is complete; final public URL is pending hosted commerce qualification |
+| Agent | Vercel project `shoppingpal-agent`, `apps/agent` | FastAPI and LangGraph ShoppingGraph | Preview deployed and health/auth boundary verified at [the current agent Preview](https://shoppingpal-agent-dv1bddpq0-julitocrztuga-2084s-projects.vercel.app) |
+| Commerce | Render service `shoppingpal-commerce` | Medusa API and canonical commerce state | Declarative service definition is in [`render.yaml`](render.yaml); hosted URL and runtime secrets remain to be configured |
+| Search | Render service `shoppingpal-search` | Typesense disposable discovery read model | Rebuilds from the canonical Medusa catalog after an empty restart; hosted service remains to be configured |
+| Databases | Neon project `shoppingpal` | Separate logical databases `shoppingpal_commerce` and `shoppingpal_agent` | Commerce migrations and the 86-product seed have been verified; hosted runtime wiring remains part of release qualification |
+| Runtime cache | Upstash Redis | Medusa/runtime Redis requirement | Provider resource is pending account terms acceptance and provisioning |
+| Payments | Stripe test mode | `pp_stripe_stripe` payment sessions, Elements confirmation, webhook, and Medusa order completion | Code path is present; hosted test credentials and webhook still require configuration and sandbox qualification |
+
+The web server calls the agent with `AGENT_URL` and `AGENT_INTERNAL_TOKEN`; the browser never calls privileged FastAPI routes directly. Hosting secrets are configured through provider-encrypted environments and ignored local files only. Actual `.env` files and credentials are never committed.
+
+## Hosted release status
+
+The Vercel agent deployment is a real, Git-connected Preview rather than a local-only stub: `/health` returns the Postgres-backed runtime status, privileged graph routes reject missing internal authentication, and Shopping Mission persistence has been exercised against the Neon agent database.
+
+The full public commerce release is intentionally not claimed yet. It requires the remaining provider actions and hosted gates for Render Medusa, Render Typesense, Upstash Redis, Stripe test mode, the hosted shopping graph, canonical cart/order behavior, and production/browser qualification. Until those checks are green, this README keeps the Live Demo entry explicitly pending. See [HANDOFF.md](HANDOFF.md) for the qualification receipt and remaining external actions.
 
 ## Product screenshots
 
