@@ -26,7 +26,7 @@ type SalesChannelService = {
 
 /**
  * Ensures a storefront publishable API key exists, linked to a sales
- * channel that carries the seeded catalog. Prints the token; idempotent.
+ * channel that carries the seeded catalog without logging credentials.
  */
 export default async function ensurePublishableKey({ container }: ExecArgs) {
   const logger = container.resolve("logger") as unknown as Logger;
@@ -58,19 +58,19 @@ export default async function ensurePublishableKey({ container }: ExecArgs) {
     title: "ShoppingPal Storefront",
   }))[0];
   if (key) {
-    logger.info(`Publishable key already present: ${key.token}`);
+    logger.info("Publishable key already present.");
   } else {
     key = await apiKeyService.createApiKeys({
       title: "ShoppingPal Storefront",
       type: "publishable",
       created_by: "",
     });
-    logger.info(`Publishable key created: ${key.token}`);
+    logger.info("Publishable key created.");
   }
 
   type WorkflowContainer = Parameters<typeof linkSalesChannelsToApiKeyWorkflow>[0];
   await linkSalesChannelsToApiKeyWorkflow(container as WorkflowContainer).run({
     input: { id: key.id, add: [channel.id] },
   });
-  logger.info(`Key ${key.token} linked to sales channel ${channel.name}`);
+  logger.info(`Publishable key linked to sales channel ${channel.name}.`);
 }
