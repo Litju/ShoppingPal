@@ -15,6 +15,15 @@
     "test": "turbo run test",
     "test:e2e": "pnpm --filter @shoppingpal/web test:e2e"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "unrs-resolver",
+      "@electric-sql/pglite",
+      "@tailwindcss/oxide",
+      "sharp"
+    ]
+  },
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.3.1",
     "eslint": "^10.8.1",
