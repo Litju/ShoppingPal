@@ -23,6 +23,10 @@ export default defineConfig({
     disable: true,
   },
   projectConfig: {
+    workerMode: (process.env.MEDUSA_WORKER_MODE ?? "shared") as
+      | "shared"
+      | "server"
+      | "worker",
     databaseUrl: process.env.DATABASE_URL,
     redisUrl: process.env.REDIS_URL,
     http: {

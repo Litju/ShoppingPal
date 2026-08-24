@@ -24,6 +24,8 @@ services:
     envVars:
       - key: PORT
         value: "10000"
+      - key: MEDUSA_WORKER_MODE
+        value: server
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
