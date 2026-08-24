@@ -12,7 +12,7 @@ services:
       corepack pnpm --filter @shoppingpal/commerce db:seed &&
       corepack pnpm --filter @shoppingpal/commerce exec medusa exec
       ./src/scripts/ensure-publishable-key.ts
-    startCommand: NODE_OPTIONS=--max-old-space-size=384 corepack pnpm --filter @shoppingpal/commerce start
+    startCommand: NODE_OPTIONS=--max-old-space-size=288 corepack pnpm --filter @shoppingpal/commerce start
     healthCheckPath: /health
     buildFilter:
       paths:
