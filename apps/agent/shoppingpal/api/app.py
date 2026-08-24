@@ -9,7 +9,7 @@ from shoppingpal.api.routes import router
 from shoppingpal.domain.missions import InMemoryMissionStore, MissionStore, PostgresMissionStore
 from shoppingpal.graph.builder import ShoppingGraph, build_shopping_graph
 from shoppingpal.graph.checkpoint import CheckpointRuntime
-from shoppingpal.retrieval.medusa import CatalogClient, MedusaCatalogClient
+from shoppingpal.retrieval.medusa import CatalogClient, MedusaCatalogClient, TypesenseCatalogClient
 from shoppingpal.settings import AgentSettings
 
 
@@ -49,11 +49,19 @@ def _runtime(
         if settings.database_url
         else InMemoryMissionStore()
     )
-    catalog_client = catalog or MedusaCatalogClient(
-        settings.medusa_backend_url,
-        settings.medusa_publishable_key,
-        settings.medusa_region_id,
-    )
+    if catalog is not None:
+        catalog_client = catalog
+    else:
+        canonical = MedusaCatalogClient(
+            settings.medusa_backend_url,
+            settings.medusa_publishable_key,
+            settings.medusa_region_id,
+        )
+        catalog_client = TypesenseCatalogClient(
+            canonical,
+            settings.typesense_url,
+            settings.typesense_api_key,
+        )
     checkpoints = checkpoint_runtime or CheckpointRuntime(
         settings.checkpoint_backend,
         settings.database_url,

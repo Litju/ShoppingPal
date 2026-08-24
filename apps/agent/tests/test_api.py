@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from base64 import urlsafe_b64encode
+from hashlib import sha256
+from hmac import new as hmac_new
+
 from fastapi.testclient import TestClient
 
 from shoppingpal.api.app import create_app
@@ -8,18 +12,24 @@ from tests.test_graph import FakeCatalog, product
 
 
 def client() -> TestClient:
-    settings = AgentSettings(internal_token="test-token")
+    settings = AgentSettings(internal_token="test-token", actor_signing_secret="actor-secret")
     return TestClient(create_app(settings, catalog=FakeCatalog([product()])))
 
 
 def headers(actor: str = "customer_1") -> dict[str, str]:
-    return {"x-agent-internal-token": "test-token", "x-actor-id": actor}
+    proof = urlsafe_b64encode(hmac_new(b"actor-secret", actor.encode(), sha256).digest()).rstrip(b"=").decode()
+    return {"x-agent-internal-token": "test-token", "x-actor-id": actor, "x-actor-proof": proof}
 
 
 def test_api_requires_internal_boundary_and_scopes_missions() -> None:
     with client() as app:
         unauthorized = app.get("/api/v1/missions")
         assert unauthorized.status_code == 401
+        unbound = app.get(
+            "/api/v1/missions",
+            headers={"x-agent-internal-token": "test-token", "x-actor-id": "customer_1"},
+        )
+        assert unbound.status_code == 401
 
         created = app.post(
             "/api/v1/missions",

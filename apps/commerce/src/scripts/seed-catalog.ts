@@ -52,6 +52,54 @@ export default async function seedCatalog({ container }: ExecArgs) {
     logger.info(`Created USD region ${usdRegion.id}.`);
   }
 
+  const salesChannelService: any = container.resolve(Modules.SALES_CHANNEL);
+  let channel = (await salesChannelService.listSalesChannels(
+    { name: "ShoppingPal Storefront" },
+    { take: 1 },
+  ))[0];
+  if (!channel) {
+    channel = (await salesChannelService.listSalesChannels({}, { take: 1 }))[0];
+  }
+  if (!channel) {
+    channel = await salesChannelService.createSalesChannels({
+      name: "ShoppingPal Storefront",
+      is_default: true,
+    });
+    logger.info("Created sales channel: ShoppingPal Storefront.");
+  }
+
+  if (process.env.STRIPE_API_KEY?.trim()) {
+    const query: any = container.resolve("query");
+    const link: any = container.resolve("remoteLink");
+    const providerResult = await query.graph({
+      entity: "payment_provider",
+      fields: ["id"],
+      filters: { id: "pp_stripe_stripe" },
+    });
+    if (providerResult.data.length === 0) {
+      throw new Error(
+        "STRIPE_API_KEY is configured but pp_stripe_stripe is not registered.",
+      );
+    }
+    const relationResult = await query.graph({
+      entity: "region_payment_provider",
+      fields: ["payment_provider_id"],
+      filters: { region_id: usdRegion.id },
+    });
+    if (
+      !relationResult.data.some(
+        (relation: { payment_provider_id: string }) =>
+          relation.payment_provider_id === "pp_stripe_stripe",
+      )
+    ) {
+      await link.create({
+        [Modules.REGION]: { region_id: usdRegion.id },
+        [Modules.PAYMENT]: { payment_provider_id: "pp_stripe_stripe" },
+      });
+      logger.info(`Enabled Stripe payments for region ${usdRegion.id}.`);
+    }
+  }
+
   // 1. Upsert the nine storefront categories.
   const existingCats: any[] = await productModuleService.listProductCategories(
     {},
@@ -157,12 +205,6 @@ export default async function seedCatalog({ container }: ExecArgs) {
 
   // 3. Ensure every product is reachable from the default sales channel,
   //    otherwise /store/products/:id 404s for publishable-key callers.
-  const salesChannelService: any = container.resolve(Modules.SALES_CHANNEL);
-  const channel = (await salesChannelService.listSalesChannels(
-    { name: "ShoppingPal Storefront" },
-    { take: 1 },
-  ))[0] ?? (await salesChannelService.listSalesChannels({}, { take: 1 }))[0];
-
   const link: any = container.resolve("remoteLink");
   const query: any = container.resolve("query");
   const allProducts: any[] = await productModuleService.listProducts(

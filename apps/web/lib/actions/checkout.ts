@@ -1,10 +1,12 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { getCartProvider, resolveCartRef } from "@/lib/cart/session";
 import { MedusaCartProvider } from "@/lib/cart/medusa-cart-provider";
 import { medusaEnabled } from "@/lib/commerce/config";
+import { sealCheckoutOrder } from "@/lib/checkout/receipt";
 
 const checkoutInputSchema = z.object({
   email: z.string().email().max(200),
@@ -63,6 +65,15 @@ export async function completeCheckoutAction(): Promise<
       return { ok: false, error: error ?? "Medusa did not authorize the order." };
     }
     if (!result.order?.id) return { ok: false, error: "Medusa did not return an order reference." };
+    const receipt = sealCheckoutOrder(result.order.id);
+    if (!receipt) return { ok: false, error: "Checkout receipt signing is not configured." };
+    (await cookies()).set("sp_checkout_order", receipt, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/checkout/success",
+      maxAge: 60 * 10,
+    });
     return { ok: true, orderId: result.order.id };
   } catch (error) {
     console.error("[checkout] completion failed:", error);

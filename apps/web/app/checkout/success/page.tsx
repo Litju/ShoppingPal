@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 
 import { Button } from "@/components/ui/button";
+import { verifyCheckoutOrder } from "@/lib/checkout/receipt";
 
 export const metadata: Metadata = { title: "Order confirmed" };
 
@@ -11,7 +13,9 @@ export default async function CheckoutSuccessPage({
   searchParams: Promise<{ order?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const orderId = Array.isArray(params.order) ? params.order[0] : params.order;
+  const requestedOrderId = Array.isArray(params.order) ? params.order[0] : params.order;
+  const receipt = (await cookies()).get("sp_checkout_order")?.value;
+  const orderId = verifyCheckoutOrder(requestedOrderId, receipt) ? requestedOrderId : undefined;
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center">
       <h1 className="text-2xl font-bold tracking-tight">{orderId ? "Order submitted" : "Checkout status"}</h1>

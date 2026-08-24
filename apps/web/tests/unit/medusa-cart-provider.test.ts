@@ -62,6 +62,19 @@ const products: Product[] = [
       },
     ],
   },
+  {
+    id: "prod_low_stock",
+    handle: "low-stock-cable",
+    title: "Low Stock Cable",
+    variants: [
+      {
+        id: "variant_low_stock",
+        inventory_quantity: 2,
+        manage_inventory: true,
+        calculated_price: { calculated_amount: 4900, currency_code: "usd" },
+      },
+    ],
+  },
 ];
 
 const ref: CartRef = { kind: "guest", token: CART_ID };
@@ -233,6 +246,7 @@ describe("MedusaCartProvider variant resolution", () => {
       slug: expected.handle,
       quantity: 1,
       unitPrice: expected.variants[0]!.calculated_price.calculated_amount,
+      stock: expected.variants[0]!.inventory_quantity,
     });
     expect(postCalls).toHaveLength(1);
     expect(postCalls[0]!.body).toMatchObject({ variant_id: variantId, quantity: 1 });
@@ -260,6 +274,50 @@ describe("MedusaCartProvider variant resolution", () => {
     await expect(createProvider(client).addItem(ref, "prod_sold_out", 1)).rejects.toMatchObject({
       name: "CartError",
       code: "out_of_stock",
+    } satisfies Partial<CartError>);
+    expect(postCalls).toHaveLength(0);
+  });
+
+  it("rejects a requested quantity above canonical stock", async () => {
+    const { client, postCalls } = makeClient();
+
+    await expect(createProvider(client).addItem(ref, "prod_low_stock", 3)).rejects.toMatchObject({
+      name: "CartError",
+      code: "out_of_stock",
+    } satisfies Partial<CartError>);
+    expect(postCalls).toHaveLength(0);
+  });
+
+  it("rechecks the canonical price at the mutation boundary", async () => {
+    const { client, postCalls } = makeClient();
+
+    await expect(
+      createProvider(client).addItem(ref, "prod_marlowe", 1, "agent", "op_price", undefined, 19800),
+    ).rejects.toMatchObject({
+      name: "CartError",
+      code: "price_changed",
+    } satisfies Partial<CartError>);
+    expect(postCalls).toHaveLength(0);
+  });
+
+  it("does not substitute another variant for an invalid variant id", async () => {
+    const { client, postCalls } = makeClient();
+
+    await expect(createProvider(client).addItem(ref, "variant_missing", 1)).rejects.toMatchObject({
+      name: "CartError",
+      code: "invalid_product",
+    } satisfies Partial<CartError>);
+    expect(postCalls).toHaveLength(0);
+  });
+
+  it("binds an agent variant guard to the requested product", async () => {
+    const { client, postCalls } = makeClient();
+
+    await expect(
+      createProvider(client).addItem(ref, "prod_marlowe", 1, "agent", undefined, "variant_tidepool"),
+    ).rejects.toMatchObject({
+      name: "CartError",
+      code: "invalid_product",
     } satisfies Partial<CartError>);
     expect(postCalls).toHaveLength(0);
   });

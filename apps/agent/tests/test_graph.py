@@ -112,7 +112,7 @@ async def test_ordinal_cart_action_uses_canonical_context_product() -> None:
     catalog = FakeCatalog([first, second])
     result = await graph(catalog, InMemoryMissionStore()).run(
         GraphRequest(
-            message="Add the second one to my cart",
+            message="Add the second one",
             context_product_ids=[first.product_id, second.product_id],
             graph_run_id="run-ordinal",
         ),
@@ -122,6 +122,45 @@ async def test_ordinal_cart_action_uses_canonical_context_product() -> None:
 
     assert result.proposed_action is not None
     assert result.proposed_action.product_id == "prod_second"
+
+
+async def test_checkout_language_requires_explicit_handoff() -> None:
+    result = await graph(FakeCatalog([product()]), InMemoryMissionStore()).run(
+        GraphRequest(
+            message="Let's buy it",
+            context_product_ids=["prod_marlowe"],
+            graph_run_id="run-buy",
+        ),
+        actor_id="guest",
+        correlation_id="corr-buy",
+    )
+
+    assert result.approval_required is True
+    assert result.payload == {
+        "kind": "approval_required",
+        "action": "checkout",
+        "message": "Please explicitly confirm before a material checkout action can proceed.",
+    }
+
+
+async def test_comparison_preserves_shortlist_order_for_ordinal_requests() -> None:
+    first = product("prod_first")
+    second = product("prod_second")
+    catalog = FakeCatalog([first, second])
+    result = await graph(catalog, InMemoryMissionStore()).run(
+        GraphRequest(
+            message="Compare the first two",
+            context_product_ids=[second.product_id, first.product_id],
+            graph_run_id="run-compare-context",
+        ),
+        actor_id="guest",
+        correlation_id="corr-compare-context",
+    )
+
+    assert [item["product_id"] for item in result.payload["products"]] == [
+        "prod_second",
+        "prod_first",
+    ]
 
 
 async def test_bundle_is_canonical_and_budget_aware() -> None:

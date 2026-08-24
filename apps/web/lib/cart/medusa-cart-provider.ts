@@ -124,23 +124,35 @@ export class MedusaCartProvider {
     }
   }
 
-  private toDto(medusa: MedusaCart): CartDTO {
+  private async toDto(medusa: MedusaCart): Promise<CartDTO> {
     // Line presentation is hydrated from catalog state server-side; Medusa
     // already revalidated prices at add/update time.
+    const lines = await Promise.all(
+      (medusa.items ?? []).map(async (item) => {
+        const variant = item.variant_id
+          ? await this.resolveVariant(item.variant_id)
+          : undefined;
+        const stock =
+          variant?.manage_inventory === false
+            ? Number.MAX_SAFE_INTEGER
+            : Math.max(0, num(variant?.inventory_quantity));
+        return {
+          productId: item.product_id ?? item.id,
+          slug: item.product_handle ?? "",
+          title: item.title,
+          brand: item.subtitle ?? "",
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          lineTotal: item.unit_price * item.quantity,
+          stock,
+          currency: medusa.currency_code.toUpperCase(),
+          imageHint: item.thumbnail ?? undefined,
+        };
+      }),
+    );
     return {
       id: medusa.id,
-      lines: (medusa.items ?? []).map((item) => ({
-        productId: item.product_id ?? item.id,
-        slug: item.product_handle ?? "",
-        title: item.title,
-        brand: item.subtitle ?? "",
-        quantity: item.quantity,
-        unitPrice: item.unit_price,
-        lineTotal: item.unit_price * item.quantity,
-        stock: Number.MAX_SAFE_INTEGER,
-        currency: medusa.currency_code.toUpperCase(),
-        imageHint: item.thumbnail ?? undefined,
-      })),
+      lines,
       itemCount: (medusa.items ?? []).reduce((n, l) => n + l.quantity, 0),
       subtotal: medusa.subtotal ?? 0,
       shipping: medusa.shipping_total ?? 0,
@@ -179,14 +191,14 @@ export class MedusaCartProvider {
     if (!cartId) return EMPTY_CART;
     const cart = await this.fetchCart(cartId);
     if (!cart) return EMPTY_CART;
-    return this.toDto(cart);
+    return await this.toDto(cart);
   }
 
   async buildCartDto(cartId: string | null): Promise<CartDTO> {
     if (!cartId) return EMPTY_CART;
     const cart = await this.fetchCart(cartId);
     if (!cart) return EMPTY_CART;
-    return this.toDto(cart);
+    return await this.toDto(cart);
   }
 
   async initializeStripeCheckout(
@@ -259,6 +271,8 @@ export class MedusaCartProvider {
     quantity: number,
     _via: "ui" | "agent" = "ui",
     operationId?: string,
+    expectedVariantId?: string,
+    expectedPrice?: number,
   ): Promise<CartDTO> {
     void _via;
     const qty = clampQuantity(quantity);
@@ -266,15 +280,21 @@ export class MedusaCartProvider {
 
     // Canonical entity resolution: accept product id/slug and resolve the
     // default variant from live Medusa state — never trust client hints.
-    const variant = await this.resolveVariant(productIdOrVariant);
+    const variant = await this.resolveVariant(productIdOrVariant, expectedVariantId);
     if (!variant) {
       throw new CartError("invalid_product", "Unknown product.");
     }
     if (
       variant.manage_inventory !== false &&
-      num(variant.inventory_quantity) <= 0
+      (num(variant.inventory_quantity) <= 0 || qty > num(variant.inventory_quantity))
     ) {
-      throw new CartError("out_of_stock", "That item is out of stock right now.");
+      throw new CartError("out_of_stock", "That quantity is not available right now.");
+    }
+    if (
+      expectedPrice !== undefined &&
+      num(variant.calculated_price?.calculated_amount) !== expectedPrice
+    ) {
+      throw new CartError("price_changed", "The canonical price changed before the cart action was acknowledged.");
     }
 
     try {
@@ -283,7 +303,7 @@ export class MedusaCartProvider {
         { variant_id: variant.id, quantity: qty },
         operationId ? { "Idempotency-Key": operationId } : undefined,
       );
-      return this.toDto(res.cart);
+      return await this.toDto(res.cart);
     } catch (error) {
       throw new CartError(
         "invalid_product",
@@ -305,16 +325,20 @@ export class MedusaCartProvider {
     const cart = await this.fetchCart(cartId);
     if (!cart) throw new CartError("cart_not_found", "No active cart.");
     const variant = await this.resolveVariant(productIdOrVariant);
+    if (!variant) throw new CartError("invalid_product", "Unknown product.");
+    if (variant.manage_inventory !== false && qty > num(variant.inventory_quantity)) {
+      throw new CartError("out_of_stock", "That quantity is not available right now.");
+    }
     const line = (cart.items ?? []).find(
-      (i) => i.variant_id === variant?.id || i.product_id === variant?.id?.replace(/^variant/, "prod"),
-    ) ?? (variant ? (cart.items ?? []).find((i) => i.variant_id === variant.id) : undefined);
+      (i) => i.variant_id === variant.id,
+    );
     if (!line) throw new CartError("invalid_product", "Item not present in cart.");
 
     const res = await this.client.post<{ cart: MedusaCart }>(
       `/store/carts/${cartId}/line-items/${line.id}`,
       { quantity: qty },
     );
-    return this.toDto(res.cart);
+    return await this.toDto(res.cart);
   }
 
   async removeItem(ref: CartRef, productIdOrVariant: string): Promise<CartDTO> {
@@ -326,11 +350,11 @@ export class MedusaCartProvider {
     const line = (cart.items ?? []).find((i) =>
       variant ? i.variant_id === variant.id : false,
     );
-    if (!line) return this.toDto(cart);
+    if (!line) return await this.toDto(cart);
     const res = await this.client.delete<{ parent?: MedusaCart }>(
       `/store/carts/${cartId}/line-items/${line.id}`,
     );
-    if (res.parent) return this.toDto(res.parent);
+    if (res.parent) return await this.toDto(res.parent);
     return this.getCart(ref);
   }
 
@@ -370,6 +394,7 @@ export class MedusaCartProvider {
    */
   private async resolveVariant(
     productIdOrSlugOrVariant: string,
+    expectedVariantId?: string,
   ): Promise<StoreProduct["variants"][number] | undefined> {
     const fields = [
       "id",
@@ -384,6 +409,7 @@ export class MedusaCartProvider {
     const regionQuery = `&region_id=${encodeURIComponent(await this.ensureRegionId())}`;
 
     let product: StoreProduct | undefined;
+    let lookedUpByVariant = false;
     if (productIdOrSlugOrVariant.startsWith("prod_")) {
       try {
         product = (
@@ -395,7 +421,7 @@ export class MedusaCartProvider {
         product = undefined;
       }
     }
-    if (!product) {
+    if (!product && !productIdOrSlugOrVariant.startsWith("variant_")) {
       const byHandle = await this.client
         .get<{ products: StoreProduct[] }>(
           `/store/products?handle=${encodeURIComponent(productIdOrSlugOrVariant)}&limit=1&fields=${fields}${regionQuery}`,
@@ -404,6 +430,7 @@ export class MedusaCartProvider {
       product = byHandle.products[0];
     }
     if (!product) {
+      lookedUpByVariant = true;
       const byVariant = await this.client
         .get<{ products: StoreProduct[] }>(
           `/store/products?variants.id[]=${encodeURIComponent(productIdOrSlugOrVariant)}&limit=1&fields=${fields}${regionQuery}`,
@@ -411,10 +438,12 @@ export class MedusaCartProvider {
         .catch(() => ({ products: [] as StoreProduct[] }));
       product = byVariant.products[0];
     }
-    return (
-      product?.variants.find((variant) => variant.id === productIdOrSlugOrVariant) ??
-      product?.variants[0]
-    );
+    const requestedVariantId = expectedVariantId ??
+      (lookedUpByVariant ? productIdOrSlugOrVariant : undefined);
+    if (requestedVariantId) return product?.variants.find((variant) => variant.id === requestedVariantId);
+    return product?.variants.find(
+      (variant) => variant.manage_inventory === false || num(variant.inventory_quantity) > 0,
+    ) ?? product?.variants[0];
   }
 }
 

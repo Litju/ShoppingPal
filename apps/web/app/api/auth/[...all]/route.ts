@@ -43,6 +43,7 @@ export async function POST(request: Request) {
   if (path === "sign-out") {
     const response = NextResponse.json({});
     response.cookies.delete(MEDUSA_CUSTOMER_COOKIE);
+    response.cookies.delete("sp_guest");
     return response;
   }
   if (path === "sign-in/email" || path === "sign-up/email") {

@@ -12,7 +12,7 @@
     "db:migrate": "medusa db:migrate",
     "db:seed": "medusa exec ./src/scripts/seed-catalog.ts",
     "search:sync": "medusa exec ./src/scripts/sync-typesense.ts",
-    "bootstrap": "medusa db:create && medusa db:migrate && medusa exec ./src/scripts/seed-catalog.ts"
+    "bootstrap": "medusa db:create && medusa db:migrate && medusa exec ./src/scripts/seed-catalog.ts && medusa exec ./src/scripts/ensure-publishable-key.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "^2.19.0",

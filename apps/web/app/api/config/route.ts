@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { medusaEnabled } from "@/lib/commerce/config";
+import { medusaEnabled, stripeTestModeEnabled } from "@/lib/commerce/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +11,6 @@ export async function GET() {
   return NextResponse.json({
     authEnabled,
     googleEnabled: false,
-    checkoutEnabled: authEnabled && Boolean(process.env.NEXT_PUBLIC_STRIPE_PK?.trim()),
+    checkoutEnabled: authEnabled && stripeTestModeEnabled(),
   });
 }

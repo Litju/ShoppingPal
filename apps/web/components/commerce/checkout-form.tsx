@@ -13,7 +13,7 @@ import { useCart } from "@/components/providers/cart-provider";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@shoppingpal/contracts";
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PK
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PK?.startsWith("pk_test_")
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK)
   : null;
 const inputClass =
@@ -64,6 +64,7 @@ export function CheckoutForm() {
         {!clientSecret ? (
           <form onSubmit={beginPayment} className="space-y-5 rounded-lg border border-border bg-card p-5">
             <h2 className="font-semibold">Shipping details</h2>
+            <p className="text-xs text-muted-foreground">Demo store — test payments only.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span>Email</span>

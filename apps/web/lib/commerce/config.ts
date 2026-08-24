@@ -65,3 +65,7 @@ export function getTypesenseConfig(): TypesenseConfig | null {
     });
   return parsed.success ? parsed.data : null;
 }
+
+export function stripeTestModeEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_STRIPE_PK?.trim().startsWith("pk_test_") ?? false;
+}

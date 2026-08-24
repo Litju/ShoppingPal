@@ -19,6 +19,7 @@ from shoppingpal.schemas import (
     CompatibilityAssessment,
     Constraint,
     IntentType,
+    Preference,
     ProductComparison,
     RecommendationResult,
     Requirements,
@@ -32,9 +33,18 @@ Node = Callable[[GraphState], Awaitable[dict[str, Any]]]
 
 def _classify_message(message: str) -> ShoppingIntent:
     lowered = message.casefold()
-    if "checkout" in lowered or "pay" in lowered or "purchase" in lowered:
+    if (
+        "checkout" in lowered
+        or re.search(r"\b(?:pay|purchase)\b", lowered)
+        or re.search(r"\b(?:let(?:'|’)?s|ready to)\s+buy\b", lowered)
+        or re.search(r"\bbuy\s+(?:it|this|that)\b", lowered)
+    ):
         return ShoppingIntent(intent=IntentType.COMMERCE_ACTION, explicit_commerce=True, action="checkout")
-    if ("add" in lowered and "cart" in lowered) or "put in my cart" in lowered:
+    if (
+        ("add" in lowered and "cart" in lowered)
+        or "put in my cart" in lowered
+        or re.search(r"\b(?:add|put)\s+(?:the\s+)?(?:first|second|third|it|this|that|one)\b", lowered)
+    ):
         return ShoppingIntent(
             intent=IntentType.COMMERCE_ACTION,
             explicit_commerce=explicit_user_commerce_intent(message),
@@ -143,6 +153,16 @@ def make_nodes(catalog: CatalogClient, missions: MissionStore) -> dict[str, Node
         mission = state.get("mission_context") or {}
         if requirements.max_price is None and isinstance(mission.get("budget"), int):
             requirements.max_price = mission["budget"]
+        if len(requirements.query.strip()) < 3 and mission.get("goal"):
+            requirements.query = str(mission["goal"])
+        requirements.constraints.extend(
+            Constraint.model_validate(constraint)
+            for constraint in mission.get("hard_constraints", [])
+        )
+        requirements.preferences.extend(
+            Preference.model_validate(preference)
+            for preference in mission.get("soft_preferences", [])
+        )
         return {"requirements": requirements.model_dump(mode="json")}
 
     async def request_clarification(state: GraphState) -> dict[str, Any]:
@@ -167,14 +187,27 @@ def make_nodes(catalog: CatalogClient, missions: MissionStore) -> dict[str, Node
         plan = SearchPlan.model_validate(state["search_plan"])
         query = "" if state.get("intent") == IntentType.BUNDLE.value else plan.query
         candidates = await catalog.search(query, limit=100)
+        degraded = bool(getattr(catalog, "degraded", False))
         if not candidates and query:
             candidates = await catalog.search("", limit=100)
-        return {"candidates": [candidate.model_dump(mode="json") for candidate in candidates]}
+            degraded = degraded or bool(getattr(catalog, "degraded", False))
+        return {
+            "candidates": [candidate.model_dump(mode="json") for candidate in candidates],
+            "degraded": degraded,
+        }
 
     async def hydrate_candidates(state: GraphState) -> dict[str, Any]:
-        candidate_ids = [candidate["product_id"] for candidate in state.get("candidates", [])]
+        candidate_ids = [str(candidate["product_id"]) for candidate in state.get("candidates", [])]
         direct_ids = re.findall(r"\bprod_[A-Za-z0-9_-]+\b", state["message"])
-        context_ids = state.get("context_product_ids", [])
+        mission = state.get("mission_context") or {}
+        context_ids: list[str] = list(
+            dict.fromkeys(
+                [
+                    *[str(product_id) for product_id in state.get("context_product_ids", [])],
+                    *[str(product_id) for product_id in mission.get("selected_products", [])],
+                ],
+            )
+        )
         hydrated = await catalog.get_by_ids(list(dict.fromkeys([*direct_ids, *context_ids, *candidate_ids])))
         return {"candidates": [candidate.model_dump(mode="json") for candidate in hydrated]}
 
@@ -209,7 +242,22 @@ def make_nodes(catalog: CatalogClient, missions: MissionStore) -> dict[str, Node
         return {"result_payload": result.model_dump(mode="json")}
 
     async def compare_products(state: GraphState) -> dict[str, Any]:
-        products = _mentioned_first(state["message"], _ranked_models(state.get("ranked_candidates", [])))[:4]
+        ranked = _ranked_models(state.get("ranked_candidates", []))
+        mission = state.get("mission_context") or {}
+        context_ids: list[str] = list(
+            dict.fromkeys(
+                [
+                    *[str(product_id) for product_id in state.get("context_product_ids", [])],
+                    *[str(product_id) for product_id in mission.get("selected_products", [])],
+                ],
+            )
+        )
+        by_id = {product.product_id: product for product in ranked}
+        contextual = [by_id[product_id] for product_id in context_ids if product_id in by_id]
+        products = _mentioned_first(
+            state["message"],
+            [*contextual, *(product for product in ranked if product.product_id not in context_ids)],
+        )[:4]
         differences = {
             "price": [f"{product.title}: {product.price} {product.currency}" for product in products],
             "stock": [f"{product.title}: {product.stock} available" for product in products],

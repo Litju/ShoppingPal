@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { randomUUID } from "node:crypto";
 
 import { getSessionUser } from "@/lib/auth/server";
 import { runAddToCart as runAgentAddToCart } from "@/lib/ai/engine";
@@ -40,12 +41,15 @@ export async function getCartAction(): Promise<CartDTO> {
 export async function addToCartAction(
   productId: string,
   quantity = 1,
+  operationId?: string,
 ): Promise<ActionResult<CartDTO>> {
   try {
     const provider = await getCartProvider();
     if (!provider) return { ok: false, error: "Cart unavailable until commerce services are configured." };
     const ref = await ensureCartRef();
-    const cart = await provider.addItem(ref, productId, quantity, "ui");
+    const idempotencyKey =
+      operationId && operationId.length <= 128 ? operationId : `ui_${randomUUID()}`;
+    const cart = await provider.addItem(ref, productId, quantity, "ui", idempotencyKey);
     revalidatePath("/", "layout");
     return { ok: true, data: cart };
   } catch (error) {
@@ -82,11 +86,11 @@ export async function applyAgentCartAction(input: {
   try {
     if (input.action === "add") {
       const result = await runAgentAddToCart(
-        { productId: input.productId, quantity: input.quantity },
-        {
-          expectedPrice: input.expectedPrice,
-          expectedVariantId: input.variantId,
-          operationId: input.operationId,
+          { productId: input.productId, quantity: input.quantity },
+          {
+            expectedPrice: input.expectedPrice,
+            expectedVariantId: input.variantId,
+            operationId: input.operationId,
         },
       );
       return result;

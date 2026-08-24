@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from shoppingpal.schemas import IntentType
@@ -15,7 +16,7 @@ class PolicyDecision:
 def explicit_user_commerce_intent(message: str) -> bool:
     """Only user-authored action words can authorize a reversible cart proposal."""
     lowered = message.casefold()
-    return any(
+    if any(
         phrase in lowered
         for phrase in (
             "add to cart",
@@ -24,6 +25,13 @@ def explicit_user_commerce_intent(message: str) -> bool:
             "remove from cart",
             "change quantity",
             "update quantity",
+        )
+    ):
+        return True
+    return bool(
+        re.search(
+            r"\b(?:add|put)\s+(?:the\s+)?(?:first|second|third|it|this|that|one)\b",
+            lowered,
         )
     )
 

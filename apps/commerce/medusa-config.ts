@@ -11,6 +11,11 @@ function secret(name: string, developmentFallback: string): string {
   return developmentFallback;
 }
 
+const stripeApiKey = process.env.STRIPE_API_KEY?.trim();
+if (stripeApiKey && !stripeApiKey.startsWith("sk_test_")) {
+  throw new Error("STRIPE_API_KEY must be a Stripe test-mode secret key.");
+}
+
 export default defineConfig({
   admin: {
     // Backend-only commerce service; the storefront is apps/web and there
@@ -29,7 +34,7 @@ export default defineConfig({
     },
   },
   modules: [
-    ...(process.env.STRIPE_API_KEY
+    ...(stripeApiKey
       ? [
           {
             resolve: "@medusajs/medusa/payment",
@@ -39,7 +44,7 @@ export default defineConfig({
                   resolve: "@medusajs/payment-stripe",
                   id: "stripe",
                   options: {
-                    apiKey: process.env.STRIPE_API_KEY,
+                    apiKey: stripeApiKey,
                     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
                     capture: process.env.STRIPE_CAPTURE !== "false",
                   },

@@ -91,6 +91,7 @@ export async function ensureCartRef(): Promise<CartRef> {
     store.set(GUEST_COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: CART_COOKIE_MAX_AGE,
     });

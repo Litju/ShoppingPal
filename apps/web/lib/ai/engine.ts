@@ -316,10 +316,12 @@ export async function runAddToCart(
   }
   const cart = await provider.addItem(
     ref,
-    guard.expectedVariantId ?? input.productId,
+    input.productId,
     input.quantity,
     "agent",
     guard.operationId,
+    guard.expectedVariantId,
+    guard.expectedPrice,
   );
   return {
     ok: true,

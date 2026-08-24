@@ -1,3 +1,4 @@
+import { createHmac, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { ToolContext } from "eve/tools";
 
@@ -6,7 +7,7 @@ const graphResponseSchema = z.object({
   correlation_id: z.string(),
   session_id: z.string(),
   mission_id: z.string().nullable(),
-  intent: z.enum(["recommend", "compare", "compatibility", "refine", "commerce_action"]),
+  intent: z.enum(["recommend", "compare", "compatibility", "bundle", "refine", "commerce_action"]),
   payload: z.record(z.string(), z.unknown()),
   proposed_action: z
     .object({
@@ -38,7 +39,7 @@ const publicCartActionSchema = z.object({
 });
 
 export const graphToolResultSchema = z.object({
-  intent: z.enum(["recommend", "compare", "compatibility", "refine", "commerce_action"]),
+  intent: z.enum(["recommend", "compare", "compatibility", "bundle", "refine", "commerce_action"]),
   payload: z.record(z.string(), z.unknown()),
   approval_required: z.boolean(),
   degraded: z.boolean(),
@@ -90,20 +91,26 @@ function publicPayload(payload: Record<string, unknown>) {
 }
 
 export async function runShoppingGraph(
-  input: { message: string; contextProductIds?: string[]; missionId?: string },
+  input: { message: string; contextProductIds?: string[]; missionId?: string; requestId?: string },
   ctx: Pick<ToolContext, "session">,
 ): Promise<GraphToolResult> {
   const baseUrl = process.env.AGENT_URL?.trim();
   if (!baseUrl) throw new Error("Shopping workflow is not configured.");
+  const actorId =
+    ctx.session.auth.current && ctx.session.auth.current.principalType !== "anonymous"
+      ? ctx.session.auth.current.principalId
+      : `eve:${ctx.session.id}`;
+  const graphRunId = `run_${input.requestId?.trim() || randomUUID().replace(/-/g, "")}`;
+  const actorSigningSecret = process.env.AGENT_ACTOR_SIGNING_SECRET?.trim();
+  if (!actorSigningSecret) throw new Error("Shopping workflow actor binding is not configured.");
+  const actorProof = createHmac("sha256", actorSigningSecret).update(actorId).digest("base64url");
 
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/graph/runs`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-actor-id":
-        ctx.session.auth.current && ctx.session.auth.current.principalType !== "anonymous"
-          ? ctx.session.auth.current.principalId
-          : `eve:${ctx.session.id}`,
+      "x-actor-id": actorId,
+      "x-actor-proof": actorProof,
       ...(process.env.AGENT_INTERNAL_TOKEN?.trim()
         ? { "x-agent-internal-token": process.env.AGENT_INTERNAL_TOKEN.trim() }
         : {}),
@@ -112,6 +119,7 @@ export async function runShoppingGraph(
       message: input.message,
       session_id: ctx.session.id,
       mission_id: input.missionId ?? null,
+      graph_run_id: graphRunId,
       context_product_ids: input.contextProductIds ?? [],
     }),
     cache: "no-store",

@@ -12,7 +12,13 @@ services:
       corepack pnpm --filter @shoppingpal/commerce db:seed &&
       corepack pnpm --filter @shoppingpal/commerce exec medusa exec
       ./src/scripts/ensure-publishable-key.ts
-    startCommand: corepack pnpm --filter @shoppingpal/commerce start
+    startCommand: >-
+      corepack pnpm --filter @shoppingpal/commerce db:migrate &&
+      corepack pnpm --filter @shoppingpal/commerce db:seed &&
+      corepack pnpm --filter @shoppingpal/commerce exec medusa exec
+      ./src/scripts/ensure-publishable-key.ts &&
+      corepack pnpm --filter @shoppingpal/commerce search:sync &&
+      corepack pnpm --filter @shoppingpal/commerce start
     healthCheckPath: /health
     buildFilter:
       paths:

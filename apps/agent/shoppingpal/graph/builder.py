@@ -92,7 +92,7 @@ class ShoppingGraph:
         }
         result = await self.compiled.ainvoke(
             initial,
-            config={"configurable": {"thread_id": request.session_id}},
+            config={"configurable": {"thread_id": f"{actor_id}:{request.session_id}"}},
         )
         payload = result.get("result_payload") or {"kind": "empty", "products": []}
         proposed_action = None
@@ -107,7 +107,7 @@ class ShoppingGraph:
             payload=payload,
             proposed_action=proposed_action,
             approval_required=bool(result.get("approval_required", False)),
-            degraded=False,
+            degraded=bool(result.get("degraded", False)),
         )
 
 

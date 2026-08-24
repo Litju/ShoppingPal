@@ -36,7 +36,8 @@ export type CartErrorCode =
   | "invalid_product"
   | "invalid_quantity"
   | "out_of_stock"
-  | "cart_not_found";
+  | "cart_not_found"
+  | "price_changed";
 
 export class CartError extends Error {
   constructor(

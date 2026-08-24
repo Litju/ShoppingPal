@@ -11,6 +11,7 @@ class GraphState(TypedDict, total=False):
     correlation_id: str
     graph_run_id: str
     context_product_ids: list[str]
+    degraded: bool
     intent: str
     explicit_commerce: bool
     action: str | None

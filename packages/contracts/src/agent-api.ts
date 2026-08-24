@@ -33,6 +33,7 @@ export interface AgentGraphRequest {
   session_id?: string;
   mission_id?: string | null;
   graph_run_id?: string | null;
+  context_product_ids?: string[];
 }
 
 export interface AgentGraphResponse {
@@ -40,7 +41,7 @@ export interface AgentGraphResponse {
   correlation_id: string;
   session_id: string;
   mission_id: string | null;
-  intent: "recommend" | "compare" | "compatibility" | "refine" | "commerce_action";
+  intent: "recommend" | "compare" | "compatibility" | "bundle" | "refine" | "commerce_action";
   payload: Record<string, unknown>;
   proposed_action: AgentCartProposal | null;
   approval_required: boolean;

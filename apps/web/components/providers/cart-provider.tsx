@@ -97,7 +97,7 @@ export function CartProvider({
       addToCart: (productId, quantity = 1) =>
         run(
           productId,
-          () => addToCartAction(productId, quantity).then((r) => {
+            () => addToCartAction(productId, quantity, globalThis.crypto.randomUUID()).then((r) => {
             if (!r.ok || !r.data) throw new Error(r.error);
             return r.data;
           }),
