@@ -3,6 +3,19 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "AGENT_INTERNAL_TOKEN",
+        "AGENT_URL",
+        "DATABASE_URL",
+        "MEDUSA_BACKEND_URL",
+        "MEDUSA_PUBLISHABLE_KEY",
+        "MEDUSA_REGION_ID",
+        "NEXT_PUBLIC_STRIPE_PK",
+        "OPENCODE_GO_API_KEY",
+        "SEARCH_BACKEND",
+        "TYPESENSE_API_KEY",
+        "TYPESENSE_URL"
+      ],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", ".medusa/server/**"]
     },
     "typecheck": {
