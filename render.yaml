@@ -22,6 +22,8 @@ services:
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
     envVars:
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
