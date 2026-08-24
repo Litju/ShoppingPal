@@ -19,7 +19,7 @@ Cart proposals are revalidated against canonical Medusa state before mutation. C
 | Medusa | `:9000` | Canonical commerce and Stripe sessions |
 | Agent | `:8200` | LangGraph tool calls |
 | Stripe test account | external | Payment confirmation and webhooks |
-| AI Gateway | external | Hosted Eve model calls |
+| OpenCode Go | external | Hosted Eve model calls |
 
 The storefront has a browse-only degraded mode. The deterministic fallback may answer local demo prompts without model credentials, but it never fabricates payment, order, or canonical commerce results.
 
@@ -28,11 +28,35 @@ The storefront has a browse-only degraded mode. The deterministic fallback may a
 ```text
 SHOPPINGPAL_PUBLIC_PORTFOLIO_RELEASE
 
-SOURCE_HEAD=ca615029ff6ba45295ab7410a68f0f07ec68cd6a
+SOURCE_HEAD=SEE_GIT_LOG
 RELEASE_COMMIT=SEE_GIT_LOG
 RELEASE_TAG=NOT_CREATED
 
-OFFICIAL_EVE=PASS (eve 0.44.3; Next.js integration builds)
+PROVIDER=opencode-go
+PROTOCOL=openai-responses
+ENDPOINT=https://opencode.ai/zen/go/v1
+MODEL=gpt-5.6-luna
+AI_SDK=@ai-sdk/openai
+
+AI_GATEWAY_RUNTIME_REMOVED=PASS
+OPENCODE_GO_PROVIDER=PASS
+OPENCODE_GO_PROTOCOL=openai-responses
+OPENCODE_GO_ENDPOINT=https://opencode.ai/zen/go/v1
+OPENCODE_GO_MODEL=gpt-5.6-luna
+OPENCODE_GO_AUTH=PASS
+OPENCODE_GO_MODELS_ENDPOINT=PASS
+RAW_RESPONSES_TURN=PASS
+EVE_DIRECT_LANGUAGE_MODEL=PASS
+EVE_MODEL_TURN=PASS
+EVE_STREAMING=PASS
+EVE_TOOL_CALLING=PASS
+EVE_TO_FASTAPI=PASS
+EVE_TO_LANGGRAPH=PASS
+SECRET_NOT_TRACKED=PASS
+SESSION_CURSOR_MONOTONIC=PASS
+HISTORICAL_TURN_REPLAY=FORBIDDEN
+
+OFFICIAL_EVE=PASS (eve 0.44.3; direct external LanguageModel; Next.js integration builds)
 FASTAPI_GRAPH_BOUNDARY=PASS
 MEDUSA_PACKAGE_BUILD=PASS
 STRIPE_TEST_PAYMENT=NOT_RUN (no configured live commerce environment)
@@ -65,7 +89,7 @@ Provision and configure these before calling the release live:
 3. A Medusa deployment with its database, Redis, publishable key, region, and Stripe test provider.
 4. Typesense and a completed catalog sync from Medusa.
 5. Stripe test keys and webhook secret; set `STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CAPTURE`, and the web `NEXT_PUBLIC_STRIPE_PK`.
-6. AI Gateway access through `AI_GATEWAY_API_KEY`; set `SHOPPINGPAL_AGENT_MODEL` only to a model available to that account.
+6. Copy the local `opencode-go` credential into Vercel encrypted environment configuration as `OPENCODE_GO_API_KEY`; the storefront is pinned to `gpt-5.6-luna` over the OpenAI Responses protocol at `https://opencode.ai/zen/go/v1`.
 7. Vercel environment variables for the web app, then a production build and live Playwright run.
 
 Keep secrets in the hosting providers and ignored local environment files. The committed `.env.example` files contain placeholders only.

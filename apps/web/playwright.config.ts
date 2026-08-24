@@ -27,9 +27,7 @@ export default defineConfig({
     env: {
       ...process.env,
       DATABASE_URL: "",
-      OPENAI_API_KEY: "",
-      ANTHROPIC_API_KEY: "",
-      GOOGLE_GENERATIVE_AI_API_KEY: "",
+      OPENCODE_GO_API_KEY: "",
       NODE_ENV: "production",
     },
   },

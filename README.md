@@ -164,7 +164,7 @@ Without the required Medusa or Stripe configuration, checkout returns an explici
 
 ## Hosted release boundary
 
-This repository snapshot contains deployable integration code, but it does not claim a hosted production deployment. A live release still requires provisioned Postgres/Redis, Medusa, FastAPI, Typesense, Stripe test credentials, an AI Gateway key, and Vercel environment variables. See [HANDOFF.md](HANDOFF.md) for the exact qualification receipt and remaining external actions.
+This repository snapshot contains deployable integration code, but it does not claim a hosted production deployment. A live release still requires provisioned Postgres/Redis, Medusa, FastAPI, Typesense, Stripe test credentials, an OpenCode Go key, and Vercel environment variables. See [HANDOFF.md](HANDOFF.md) for the exact qualification receipt and remaining external actions.
 
 ## Product screenshots
 
