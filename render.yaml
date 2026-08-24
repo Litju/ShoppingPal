@@ -12,7 +12,7 @@ services:
       corepack pnpm --filter @shoppingpal/commerce db:seed &&
       corepack pnpm --filter @shoppingpal/commerce exec medusa exec
       ./src/scripts/ensure-publishable-key.ts
-    startCommand: corepack pnpm --filter @shoppingpal/commerce start
+    startCommand: NODE_OPTIONS=--max-old-space-size=384 corepack pnpm --filter @shoppingpal/commerce start
     healthCheckPath: /health
     buildFilter:
       paths:
@@ -22,8 +22,6 @@ services:
         - pnpm-lock.yaml
         - pnpm-workspace.yaml
     envVars:
-      - key: NODE_OPTIONS
-        value: --max-old-space-size=384
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
