@@ -10,6 +10,7 @@ dependencies = [
   "langchain-core>=0.3.0",
   "langgraph>=0.2.60",
   "langgraph-checkpoint-postgres>=2.0.0",
+  "psycopg[binary]>=3.3.4",
   "pydantic>=2.10.0",
   "uvicorn[standard]>=0.34.0",
 ]
@@ -42,3 +43,6 @@ reportTypedDictNotRequiredAccess = "none"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.vercel]
+entrypoint = "main:app"

@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: shoppingpal-commerce
+    runtime: node
+    plan: free
+    region: virginia
+    rootDir: .
+    buildCommand: >-
+      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm --filter @shoppingpal/commerce... build &&
+      corepack pnpm --filter @shoppingpal/commerce db:migrate &&
+      corepack pnpm --filter @shoppingpal/commerce db:seed &&
+      corepack pnpm --filter @shoppingpal/commerce exec medusa exec
+      ./src/scripts/ensure-publishable-key.ts
+    startCommand: corepack pnpm --filter @shoppingpal/commerce start
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - apps/commerce/**
+        - packages/contracts/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: STORE_CORS
+        sync: false
+      - key: ADMIN_CORS
+        sync: false
+      - key: AUTH_CORS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: MEDUSA_BACKEND_URL
+        sync: false
+      - key: MEDUSA_PUBLISHABLE_KEY
+        sync: false
+      - key: MEDUSA_REGION_ID
+        sync: false
+      - key: TYPESENSE_URL
+        sync: false
+      - key: TYPESENSE_API_KEY
+        sync: false
+      - key: STRIPE_API_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CAPTURE
+        value: "true"
+
+  - type: web
+    name: shoppingpal-search
+    runtime: image
+    plan: free
+    region: virginia
+    image:
+      url: docker.io/typesense/typesense:27.1
+    healthCheckPath: /health
+    envVars:
+      - key: TYPESENSE_DATA_DIR
+        value: /data
+      - key: TYPESENSE_ENABLE_CORS
+        value: "true"
+      - key: TYPESENSE_API_KEY
+        sync: false

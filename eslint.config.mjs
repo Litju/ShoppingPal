@@ -33,6 +33,7 @@ const eslintConfig = [
     ignores: [
       "**/node_modules/**",
       "**/.next/**",
+      "**/.vercel/**",
       "**/.eve/**",
       "**/.data/**",
       "**/.turbo/**",
