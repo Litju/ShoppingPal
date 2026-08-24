@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { medusaEnabled, stripeTestModeEnabled } from "@/lib/commerce/config";
+import { checkoutReceiptConfigured } from "@/lib/checkout/receipt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,6 @@ export async function GET() {
   return NextResponse.json({
     authEnabled,
     googleEnabled: false,
-    checkoutEnabled: authEnabled && stripeTestModeEnabled(),
+    checkoutEnabled: authEnabled && stripeTestModeEnabled() && checkoutReceiptConfigured(),
   });
 }

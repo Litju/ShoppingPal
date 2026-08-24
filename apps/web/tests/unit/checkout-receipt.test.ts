@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { sealCheckoutOrder, verifyCheckoutOrder } from "@/lib/checkout/receipt";
+import {
+  checkoutReceiptConfigured,
+  sealCheckoutOrder,
+  verifyCheckoutOrder,
+} from "@/lib/checkout/receipt";
 
 const previous = process.env.CHECKOUT_RECEIPT_SECRET;
 
@@ -18,5 +22,15 @@ describe("checkout receipt binding", () => {
     expect(verifyCheckoutOrder("order_other", sealed)).toBe(false);
     expect(verifyCheckoutOrder("order_test", `${sealed}tampered`)).toBe(false);
     expect(verifyCheckoutOrder("order_test", "order_test.fake")).toBe(false);
+  });
+
+  it("fails closed in production without the dedicated receipt secret", () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    delete process.env.CHECKOUT_RECEIPT_SECRET;
+
+    expect(checkoutReceiptConfigured()).toBe(false);
+
+    process.env.NODE_ENV = previousNodeEnv;
   });
 });

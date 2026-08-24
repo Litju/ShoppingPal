@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { z } from "zod";
 import type { ToolContext } from "eve/tools";
 
@@ -91,7 +91,7 @@ function publicPayload(payload: Record<string, unknown>) {
 }
 
 export async function runShoppingGraph(
-  input: { message: string; contextProductIds?: string[]; missionId?: string; requestId?: string },
+  input: { message: string; contextProductIds?: string[]; missionId?: string },
   ctx: Pick<ToolContext, "session">,
 ): Promise<GraphToolResult> {
   const baseUrl = process.env.AGENT_URL?.trim();
@@ -100,7 +100,7 @@ export async function runShoppingGraph(
     ctx.session.auth.current && ctx.session.auth.current.principalType !== "anonymous"
       ? ctx.session.auth.current.principalId
       : `eve:${ctx.session.id}`;
-  const graphRunId = `run_${input.requestId?.trim() || randomUUID().replace(/-/g, "")}`;
+  const graphRunId = `run_${ctx.session.turn.id}`;
   const actorSigningSecret = process.env.AGENT_ACTOR_SIGNING_SECRET?.trim();
   if (!actorSigningSecret) throw new Error("Shopping workflow actor binding is not configured.");
   const actorProof = createHmac("sha256", actorSigningSecret).update(actorId).digest("base64url");

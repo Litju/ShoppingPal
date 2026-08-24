@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import type { ActorContext } from "@shoppingpal/contracts";
 import { getMedusaConfig } from "@/lib/commerce/config";
 import { MedusaClient } from "@/lib/commerce/medusa-client";
+import { MedusaCartProvider } from "@/lib/cart/medusa-cart-provider";
 
 export const MEDUSA_CUSTOMER_COOKIE = "sp_customer";
 
@@ -77,6 +78,10 @@ export async function medusaAuthAction(
     token = signedIn.token;
   }
 
+  const guestToken = (await cookies()).get("sp_guest")?.value;
+  if (guestToken?.startsWith("cart_")) {
+    await new MedusaCartProvider().attachCustomer(guestToken, token);
+  }
   return { token, user: await getMedusaUser(token) };
 }
 

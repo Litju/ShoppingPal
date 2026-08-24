@@ -83,7 +83,9 @@ async function fetchMedusaProducts(): Promise<Product[]> {
 }
 
 function toDocument(product: Product): TypesenseDocument | null {
-  const variant = product.variants?.[0];
+  const variant = product.variants?.find(
+    (item) => item.manage_inventory === false || Number(item.inventory_quantity ?? 0) > 0,
+  ) ?? product.variants?.[0];
   if (!variant) return null;
   const metadata = product.metadata ?? {};
   const price = Number(variant.calculated_price?.calculated_amount ?? 0);

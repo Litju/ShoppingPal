@@ -55,8 +55,12 @@ function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function isPurchasable(variant: MedusaVariant): boolean {
+  return variant.manage_inventory === false || num(variant.inventory_quantity) > 0;
+}
+
 function toPresentation(p: MedusaProduct): Product | null {
-  const variant = p.variants?.[0];
+  const variant = p.variants?.find(isPurchasable) ?? p.variants?.[0];
   if (!variant) return null;
   const meta = (p.metadata ?? {}) as Record<string, unknown>;
   const categorySlug = str(meta.category_slug);

@@ -1,9 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 function receiptSecret(): string | null {
-  const secret = process.env.CHECKOUT_RECEIPT_SECRET?.trim() || process.env.AGENT_INTERNAL_TOKEN?.trim();
+  const secret = process.env.CHECKOUT_RECEIPT_SECRET?.trim();
   if (secret) return secret;
   return process.env.NODE_ENV === "production" ? null : "shoppingpal-development-receipt-secret";
+}
+
+export function checkoutReceiptConfigured(): boolean {
+  return receiptSecret() !== null;
 }
 
 function signature(orderId: string, secret: string): string {

@@ -227,6 +227,7 @@ def make_nodes(catalog: CatalogClient, missions: MissionStore) -> dict[str, Node
         ranked = rank_candidates(
             Requirements.model_validate(state["requirements"]).query,
             _models(state.get("candidates", [])),
+            preferences=Requirements.model_validate(state["requirements"]).preferences,
         )
         return {"ranked_candidates": [item.model_dump(mode="json") for item in ranked]}
 

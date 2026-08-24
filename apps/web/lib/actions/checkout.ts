@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getCartProvider, resolveCartRef } from "@/lib/cart/session";
 import { MedusaCartProvider } from "@/lib/cart/medusa-cart-provider";
 import { medusaEnabled } from "@/lib/commerce/config";
-import { sealCheckoutOrder } from "@/lib/checkout/receipt";
+import { checkoutReceiptConfigured, sealCheckoutOrder } from "@/lib/checkout/receipt";
 
 const checkoutInputSchema = z.object({
   email: z.string().email().max(200),
@@ -29,6 +29,7 @@ export async function startCheckoutAction(input: CheckoutInput): Promise<
   const parsed = checkoutInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Enter a valid shipping address and email." };
   if (!medusaEnabled()) return { ok: false, error: "Checkout is unavailable until commerce is configured." };
+  if (!checkoutReceiptConfigured()) return { ok: false, error: "Checkout receipt signing is not configured." };
 
   try {
     const provider = await getCartProvider();
@@ -52,6 +53,7 @@ export async function completeCheckoutAction(): Promise<
   | { ok: false; error: string }
 > {
   if (!medusaEnabled()) return { ok: false, error: "Checkout is unavailable until commerce is configured." };
+  if (!checkoutReceiptConfigured()) return { ok: false, error: "Checkout receipt signing is not configured." };
 
   try {
     const provider = await getCartProvider();

@@ -10,7 +10,6 @@ export default defineTool({
     message: z.string().min(1).max(2000),
     contextProductIds: z.array(z.string()).max(12).optional(),
     missionId: z.string().max(120).optional(),
-    requestId: z.string().max(120).optional(),
   }),
   outputSchema: graphToolResultSchema,
   execute: runShoppingGraph,
