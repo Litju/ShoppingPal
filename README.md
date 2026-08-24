@@ -1,10 +1,10 @@
 # ShoppingPal
 
-Live Demo: hosted commerce release pending provider setup
+Live Demo: [shoppingpal.vercel.app](https://shoppingpal.vercel.app)
 
 Source: [github.com/Litju/ShoppingPal](https://github.com/Litju/ShoppingPal)
 
-The FastAPI agent has a verified Vercel Preview at [shoppingpal-agent.vercel.app](https://shoppingpal-agent-dv1bddpq0-julitocrztuga-2084s-projects.vercel.app). The final storefront URL will be added here after the hosted commerce release is provisioned and qualified.
+The storefront is deployed on Vercel Production at [shoppingpal.vercel.app](https://shoppingpal.vercel.app). The FastAPI agent has a verified Preview at [shoppingpal-agent.vercel.app](https://shoppingpal-agent-dv1bddpq0-julitocrztuga-2084s-projects.vercel.app). The full hosted commerce release remains subject to the provider and end-to-end qualification gates documented below.
 
 <p align="center">
   <img src="docs/assets/readme/app-home.png" alt="ShoppingPal home screen with the shopping companion prompt and featured catalog" width="100%" />
@@ -205,7 +205,7 @@ The repository is a pnpm/Turborepo monorepo, deployed as separate services. The 
 
 | Component | Hosting and root | Responsibility | Current status |
 | --- | --- | --- | --- |
-| Storefront | Vercel project `shoppingpal`, `apps/web` | Next.js storefront, Eve session runtime, assistant UI, cart, and checkout | Eve/OpenCode Go/streaming/session qualification is complete; final public URL is pending hosted commerce qualification |
+| Storefront | Vercel project `shoppingpal`, `apps/web` | Next.js storefront, Eve session runtime, assistant UI, cart, and checkout | Production URL is live; full hosted commerce qualification is still pending |
 | Agent | Vercel project `shoppingpal-agent`, `apps/agent` | FastAPI and LangGraph ShoppingGraph | Preview deployed and health/auth boundary verified at [the current agent Preview](https://shoppingpal-agent-dv1bddpq0-julitocrztuga-2084s-projects.vercel.app) |
 | Commerce | Render service `shoppingpal-commerce` | Medusa API and canonical commerce state | Declarative service definition is in [`render.yaml`](render.yaml); hosted URL and runtime secrets remain to be configured |
 | Search | Render service `shoppingpal-search` | Typesense disposable discovery read model | Rebuilds from the canonical Medusa catalog after an empty restart; hosted service remains to be configured |
@@ -219,7 +219,7 @@ The web server calls the agent with `AGENT_URL` and `AGENT_INTERNAL_TOKEN`; the 
 
 The Vercel agent deployment is a real, Git-connected Preview rather than a local-only stub: `/health` returns the Postgres-backed runtime status, privileged graph routes reject missing internal authentication, and Shopping Mission persistence has been exercised against the Neon agent database.
 
-The full public commerce release is intentionally not claimed yet. It requires the remaining provider actions and hosted gates for Render Medusa, Render Typesense, Upstash Redis, Stripe test mode, the hosted shopping graph, canonical cart/order behavior, and production/browser qualification. Until those checks are green, this README keeps the Live Demo entry explicitly pending. See [HANDOFF.md](HANDOFF.md) for the qualification receipt and remaining external actions.
+The production storefront URL is published above, but the full public commerce release is intentionally not claimed yet. It requires the remaining provider actions and hosted gates for Render Medusa, Render Typesense, Upstash Redis, Stripe test mode, the hosted shopping graph, canonical cart/order behavior, and production/browser qualification. See [HANDOFF.md](HANDOFF.md) for the qualification receipt and remaining external actions.
 
 ## Product screenshots
 
